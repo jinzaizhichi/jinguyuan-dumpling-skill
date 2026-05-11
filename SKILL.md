@@ -1,7 +1,7 @@
 ---
 name: jinguyuan-dumpling-skill
 description: 金谷园饺子馆信息查询与在线排队取号。查询餐厅信息、外卖配送、生饺子打包、Wi-Fi、最新动态、到店自取叫号下单、菜品配方；内嵌美团排队 Skill 支持在线取号、查进度、取消排队。
-version: 0.5.2
+version: 0.5.3
 alwaysApply: false
 keywords:
   - 金谷园
@@ -169,6 +169,7 @@ keywords:
 - MCP 端点：以 `skill.json` 中 `mcp_server.url` 为准
 - 协议：MCP Streamable HTTP（POST 走 MCP 协议，GET 返回业务数据 JSON）
 - 部署平台：腾讯云 CloudBase 云函数
+- MCP Server 版本号以 `package.json` 为单一来源（`src/index.js` 通过 `createRequire` 动态读取，不再硬编码）
 - 内嵌排队 Skill 版本独立演进，与本 Skill 版本号无关联
 
 ### 发布平台
