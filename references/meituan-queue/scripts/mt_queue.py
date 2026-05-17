@@ -194,10 +194,6 @@ def cmd_index(client: QueueClient, shop_id: int) -> str:
         lines.append(f"你已有排队订单（{tableNumDesc}），无需重复取号。可用 order_detail 查看详情。")
         return "\n".join(lines)
 
-    if not support:
-        lines.append("该门店暂不支持在线排队。")
-        return "\n".join(lines)
-
     # 桌型列表
     if table_infos:
         lines.append("")
@@ -209,19 +205,20 @@ def cmd_index(client: QueueClient, shop_id: int) -> str:
             wait = t.get("waitCount", 0)
             wait_desc = f"排{wait}桌" if wait > 0 else "无需等待"
             lines.append(f"  [{tid}] {name}({cap}) — {wait_desc}")
+        if not support:
+            lines.append("该门店不支持在线排队，请至现场取号")
+        else:
+            lines.append("")
+            lines.append("请选择桌型编号（方括号中的数字）和就餐人数进行取号。")
     else:
         lines.append("当前无可用桌型。")
         return "\n".join(lines)
-
-    lines.append("")
-    lines.append("请选择桌型编号（方括号中的数字）和就餐人数进行取号。")
 
     return "\n".join(lines)
 
 
 def cmd_take_number(
     client: QueueClient, shop_id: int, people_count: int, table_type_id: int,
-    *, force: bool = False,
 ) -> str:
     """取号排队，成功后自动查询订单详情返回完整信息。"""
 
@@ -244,7 +241,11 @@ def cmd_take_number(
         )
 
     queue_state = data.get("queueIndexShopVO") or {}
+    support = queue_state.get("supportQueue", False)
+    if not support:
+        return "该门店暂不支持在线排队。"
     table_infos = queue_state.get("queueTableInfos") or []
+    supportFirst = queue_state.get("supportFirstQueue", False)
     matched_info = None
     for info in table_infos:
         if info.get("tableTypeId") == table_type_id:
@@ -257,8 +258,10 @@ def cmd_take_number(
             for t in table_infos
         )
         return f"取号失败：桌型 {table_type_id} 不存在。可用桌型：{available or '无'}"
-
+    wait_count = matched_info.get("waitCount", 0)
     table_type_name = matched_info.get("tableTypeName", "")
+    if not supportFirst and wait_count == 0:
+        return f" {table_type_name} 当前暂不排队，无需取号。"
 
     # Step 1.2: validate people_count against table capacity
     cap_desc = matched_info.get("tableCapacityDesc", "")
@@ -269,15 +272,6 @@ def cmd_take_number(
                 f"就餐人数 {people_count} 与桌型 {table_type_name}({cap_desc}) 不匹配。\n"
                 f"该桌型适合 {cap_min}-{cap_max} 人，请调整人数或选择其他桌型。"
             )
-
-    # Step 1.3: check if queue is needed (waitCount=0 means no queue)
-    wait_count = matched_info.get("waitCount", 0)
-    if wait_count == 0 and not force:
-        shop_name = queue_state.get("shopName") or f"门店{shop_id}"
-        return (
-            f"【{shop_name}】{table_type_name}({cap_desc}) 当前无人排队，但排队情况可能随时变化。\n"
-            f"如需确保位置，建议仍然取号。请用 --force 参数确认取号。"
-        )
 
     phone = data.get("phone", "")
 
@@ -711,10 +705,6 @@ def main():
         "--table-type-id", type=int,
         help="桌型 ID（take_number 必填，从 index 返回结果获取）",
     )
-    parser.add_argument(
-        "--force", action="store_true", default=False,
-        help="跳过无人排队确认，直接取号",
-    )
 
     args = parser.parse_args()
 
@@ -738,7 +728,6 @@ def main():
                 parser.error("take_number requires --people-count and --table-type-id")
             result = cmd_take_number(
                 client, args.shop_id, args.people_count, args.table_type_id,
-                force=args.force,
             )
 
         elif args.action == "order_detail":

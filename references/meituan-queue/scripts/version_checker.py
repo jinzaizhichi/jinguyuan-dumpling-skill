@@ -5,7 +5,7 @@ Skill 版本管理 — 自动检查更新并下载最新版本（零外部依赖
 配置文件：与本脚本同目录下的 version_config.json
   {
     "version_url": "https://s3plus-shon.meituan.net/paidui/skill/version.json",
-    "current_version": "V1"
+    "current_version": "V2"
   }
 """
 from __future__ import annotations
