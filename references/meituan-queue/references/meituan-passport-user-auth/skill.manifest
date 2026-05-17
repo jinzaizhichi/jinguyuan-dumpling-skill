@@ -1,9 +1,7 @@
 skill-manifest-version: 1
-skill-id: c79cc90a03a94c5687acef2071e7ad2b6c74f2c3983e34dfa1c9a51b15b1f0fb
+skill-id: 57ca5db295c44d1d4814e90b04aacdcac9c395268a697d81cc533717aa8aa25c
 
 files:
-  cf147ad1c2e9eae6d40ecfe1e842f8c50790a8261c794abb179d20f95a3641c5  SKILL.md
-  e17f689a630e49a6447ea0f0dbe9107afd6e4602ea8b66778373867744dd234c  reference.md
-  a8d3f515698087c48f402219aabeed044fa5388eecdfdb80986b722f360fdce7  scripts/install.sh
-  e405f9f7ff234c7d09f111a53fd5cb6a369ba402e5d0d338fd4fdd93dfd5cf48  scripts/mtuser-pt-passport-0.1.4.tgz
-  ffd54e848971851f5d33d04d491d084bbed7f3ffef100a5b3c241d8150245118  scripts/qrcode.sh
+  930b7a9654574bf8406a28d0f5ccbf981dab6a05fc2ae66db575f986692f1cb0  SKILL.md
+  571408c72e77eba0bae85acfe6ae5c8bb2f65ed64fba1eb2836ffae515808185  reference.md
+  edad628b444a50445c14a6b487293b6b1112773973bd8742e422051dc5c5bd93  scripts/mtuser-mt-passport-0.0.1-beta1.tgz
