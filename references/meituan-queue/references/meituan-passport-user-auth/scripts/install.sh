@@ -21,13 +21,13 @@ TMP_DIR=""
 cleanup() { [ -n "$TMP_DIR" ] && rm -rf "$TMP_DIR"; }
 trap cleanup EXIT
 
-# 1) 优先：本地 .tgz
-TGZ_FILE=$(for f in "$SCRIPT_DIR"/mtuser-pt-passport-*.tgz; do [ -f "$f" ] && echo "$f"; done | sort -V | tail -1)
+# 1) 优先：本地 .tgz（glob 无匹配时 || true 兜底, 避免 set -e 误退出）
+TGZ_FILE=$(for f in "$SCRIPT_DIR"/mtuser-pt-passport-*.tgz; do [ -f "$f" ] && echo "$f"; done | sort -V | tail -1 || true)
 
 # 2) 次选：本地 .tgz.txt（兼容历史 ClawHub 包形态）
 TXT_FILE=""
 if [ -z "$TGZ_FILE" ]; then
-  TXT_FILE=$(for f in "$SCRIPT_DIR"/mtuser-pt-passport-*.tgz.txt; do [ -f "$f" ] && echo "$f"; done | sort -V | tail -1)
+  TXT_FILE=$(for f in "$SCRIPT_DIR"/mtuser-pt-passport-*.tgz.txt; do [ -f "$f" ] && echo "$f"; done | sort -V | tail -1 || true)
 fi
 
 # 3) 兜底：从 Gitee raw 远程拉取（ClawHub 安装场景）
