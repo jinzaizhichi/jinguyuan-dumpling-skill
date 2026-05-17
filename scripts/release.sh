@@ -5,12 +5,13 @@
 # 示例:  scripts/release.sh 0.5.10
 #
 # 行为:
-#   1. 校验工作区干净 + 在 main 分支
+#   1. 校验工作区干净 + 在 main 分支 + 三个 remote (gitee/github/clawhub) 都在
 #   2. 同步改 skill.json + SKILL.md 的版本号
 #   3. commit + 打 tag v<version>
-#   4. push gitee main + tag
+#   4. push gitee  main + tag
 #   5. push github main + tag (走 127.0.0.1:1087 代理)
-#   6. 验证 shields.io 是否返回新 tag
+#   6. push clawhub main + tag
+#   7. 验证 shields.io 是否返回新 tag
 #
 # 失败时终止，不进入下一步。
 
@@ -18,6 +19,7 @@ set -euo pipefail
 
 GITHUB_PROXY="http://127.0.0.1:1087"
 REPO_PATH="JinGuYuan/jinguyuan-dumpling-skill"
+REMOTES=(gitee github clawhub)
 
 # ------- 参数与环境校验 -------
 if [[ $# -ne 1 ]]; then
@@ -46,6 +48,15 @@ if [[ "$CURRENT_BRANCH" != "main" ]]; then
   echo "错误: 当前不在 main 分支 (在 $CURRENT_BRANCH)" >&2
   exit 1
 fi
+
+# 校验三个 remote 都已配置
+for r in "${REMOTES[@]}"; do
+  if ! git remote get-url "$r" >/dev/null 2>&1; then
+    echo "错误: 缺少 git remote: $r" >&2
+    echo "      请先 git remote add $r <url>" >&2
+    exit 1
+  fi
+done
 
 TAG="v$NEW_VERSION"
 if git rev-parse "$TAG" >/dev/null 2>&1; then
@@ -93,12 +104,18 @@ echo "==> push github (proxy: $GITHUB_PROXY)"
 git -c http.proxy="$GITHUB_PROXY" -c https.proxy="$GITHUB_PROXY" push github main
 git -c http.proxy="$GITHUB_PROXY" -c https.proxy="$GITHUB_PROXY" push github "$TAG"
 
-# ------- 5. 验证 shields.io -------
+# ------- 5. push clawhub -------
+echo "==> push clawhub"
+git push clawhub main
+git push clawhub "$TAG"
+
+# ------- 6. 验证 shields.io -------
 echo "==> 验证 shields.io 徽章"
 sleep 3
 BADGE_VERSION="$(curl -sL "https://img.shields.io/github/v/tag/$REPO_PATH?sort=semver" \
   | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)"
 
+echo
 if [[ "$BADGE_VERSION" == "$TAG" ]]; then
   echo "==> ✓ 徽章已更新到 $TAG"
 else
