@@ -10,7 +10,7 @@
 #   3. commit + 打 tag v<version>
 #   4. push gitee  main + tag
 #   5. push github main + tag (走 127.0.0.1:1087 代理)
-#   6. clawhub skill publish . --version <version> (发布到 ClawHub Skill Registry)
+#   6. 临时挪走开发者侧资产 (.notes/ + scripts/release.sh) 后 clawhub publish, 发完恢复
 #   7. 验证 shields.io 是否返回新 tag
 #
 # 失败时终止，不进入下一步。
@@ -118,28 +118,51 @@ git -c http.proxy="$GITHUB_PROXY" -c https.proxy="$GITHUB_PROXY" push github "$T
 
 # ------- 5. publish clawhub -------
 # clawhub publish 是按目录打包上传到公开 registry,
-# 为避免 .notes/ 这类工作区私房本被上传, 发布前临时挪走, 发完恢复。
-# 使用 trap 保证异常退出时也能恢复。
-NOTES_DIR="$ROOT/.notes"
-NOTES_STASH=""
-restore_notes() {
-  if [[ -n "$NOTES_STASH" && -d "$NOTES_STASH" && ! -e "$NOTES_DIR" ]]; then
-    mv "$NOTES_STASH" "$NOTES_DIR"
-    echo "==> .notes/ 已恢复"
+# 为避免开发者侧资产 (.notes/ 私房本、发版脚本本身) 被上传,
+# 发布前临时挪走, 发完恢复。使用 trap 保证异常退出也能恢复。
+#
+# DEV_ASSETS: ClawHub 包不应出现的开发者侧文件/目录 (相对 ROOT)
+# - .notes/             AI 协作私房本, 不公开
+# - scripts/release.sh  发版入口脚本, Skill 运行时不依赖, 且含内部代理等约定
+DEV_ASSETS=(".notes" "scripts/release.sh")
+STASH_ROOT=""
+STASHED=()
+
+restore_dev_assets() {
+  local i
+  for ((i = ${#STASHED[@]} - 1; i >= 0; i--)); do
+    local rel="${STASHED[$i]}"
+    local src="$STASH_ROOT/$rel"
+    local dst="$ROOT/$rel"
+    if [[ -e "$src" && ! -e "$dst" ]]; then
+      mkdir -p "$(dirname "$dst")"
+      mv "$src" "$dst"
+      echo "==> 恢复 $rel"
+    fi
+  done
+  STASHED=()
+  if [[ -n "$STASH_ROOT" && -d "$STASH_ROOT" ]]; then
+    rm -rf "$STASH_ROOT"
+    STASH_ROOT=""
   fi
 }
-if [[ -d "$NOTES_DIR" ]]; then
-  NOTES_STASH="$(mktemp -d -t jinguyuan-notes.XXXXXX)/.notes"
-  mkdir -p "$(dirname "$NOTES_STASH")"
-  mv "$NOTES_DIR" "$NOTES_STASH"
-  trap restore_notes EXIT
-  echo "==> .notes/ 已临时挪走 ($NOTES_STASH), 发布后自动恢复"
-fi
+
+STASH_ROOT="$(mktemp -d -t jinguyuan-stash.XXXXXX)"
+trap restore_dev_assets EXIT
+
+for rel in "${DEV_ASSETS[@]}"; do
+  if [[ -e "$ROOT/$rel" ]]; then
+    mkdir -p "$STASH_ROOT/$(dirname "$rel")"
+    mv "$ROOT/$rel" "$STASH_ROOT/$rel"
+    STASHED+=("$rel")
+    echo "==> 临时挪走 $rel (发布后自动恢复)"
+  fi
+done
 
 echo "==> clawhub publish (version: $NEW_VERSION)"
 clawhub publish . --version "$NEW_VERSION" --tags latest
 
-restore_notes
+restore_dev_assets
 trap - EXIT
 
 # ------- 6. 验证 shields.io -------
