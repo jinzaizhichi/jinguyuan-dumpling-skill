@@ -5,3 +5,6 @@ node_modules/
 .DS_Store
 __pycache__/
 *.pyc
+
+# 工作区私房本（仅供 AI 协作沉淀，不发布）
+.notes/
