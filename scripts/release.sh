@@ -142,12 +142,14 @@ PROJECTED=()
 restore_dev_assets() {
   # 清理 ClawHub 投影影子文件
   local p
-  for p in "${PROJECTED[@]}"; do
-    if [[ -f "$ROOT/$p" ]]; then
-      rm -f "$ROOT/$p"
-      echo "==> 清理投影 $p"
-    fi
-  done
+  if (( ${#PROJECTED[@]} > 0 )); then
+    for p in "${PROJECTED[@]}"; do
+      if [[ -f "$ROOT/$p" ]]; then
+        rm -f "$ROOT/$p"
+        echo "==> 清理投影 $p"
+      fi
+    done
+  fi
   PROJECTED=()
 
   # 恢复开发者资产
@@ -182,9 +184,10 @@ for rel in "${DEV_ASSETS[@]}"; do
 done
 
 # 投影二进制 .tgz -> .tgz.txt (ClawHub 白名单绕过)
+# 注意: glob 必须不带双引号才会展开, 否则 * 被当字面字符
 shopt -s nullglob
 for pattern in "${CLAWHUB_BIN_GLOBS[@]}"; do
-  for src in "$ROOT/$pattern"; do
+  for src in $ROOT/$pattern; do
     [[ -f "$src" ]] || continue
     cp "$src" "$src.txt"
     rel="${src#$ROOT/}"
