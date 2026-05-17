@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
 # pt-passport CLI install/update script
-# Installs from local tgz bundle. Skips if installed version == bundle version.
-# 兼容两种发布形态：
-#   - .tgz      ：GitHub/Gitee 源码仓库 / 开发者本地 clone
-#   - .tgz.txt  ：ClawHub 发布包（绕过 ClawHub 文本文件白名单的影子文件）
+# 三级 fallback：本地 .tgz → 本地 .tgz.txt → curl Gitee raw
+#   - 本地 .tgz       ：开发者 clone GitHub/Gitee 仓库
+#   - 本地 .tgz.txt   ：历史 ClawHub 包形态 (兼容保留)
+#   - 远程 Gitee raw  ：ClawHub 包内不带 tgz, 安装时按需拉取
 set -euo pipefail
+
+# 升级 pt-passport 时同步改这里
+PT_PASSPORT_VERSION="0.1.4"
+GITEE_RAW_URL="https://gitee.com/JinGuYuan/jinguyuan-dumpling-skill/raw/main/references/meituan-queue/references/meituan-passport-user-auth/scripts/mtuser-pt-passport-${PT_PASSPORT_VERSION}.tgz"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd)"
 
@@ -13,16 +17,32 @@ if ! command -v npm &>/dev/null; then
   exit 2
 fi
 
-# 优先找 .tgz；找不到再 fallback .tgz.txt（ClawHub 形态）
+TMP_DIR=""
+cleanup() { [ -n "$TMP_DIR" ] && rm -rf "$TMP_DIR"; }
+trap cleanup EXIT
+
+# 1) 优先：本地 .tgz
 TGZ_FILE=$(for f in "$SCRIPT_DIR"/mtuser-pt-passport-*.tgz; do [ -f "$f" ] && echo "$f"; done | sort -V | tail -1)
+
+# 2) 次选：本地 .tgz.txt（兼容历史 ClawHub 包形态）
 TXT_FILE=""
 if [ -z "$TGZ_FILE" ]; then
   TXT_FILE=$(for f in "$SCRIPT_DIR"/mtuser-pt-passport-*.tgz.txt; do [ -f "$f" ] && echo "$f"; done | sort -V | tail -1)
 fi
 
+# 3) 兜底：从 Gitee raw 远程拉取（ClawHub 安装场景）
 if [ -z "$TGZ_FILE" ] && [ -z "$TXT_FILE" ]; then
-  echo "No local bundle found in $SCRIPT_DIR (tried *.tgz and *.tgz.txt)" >&2
-  exit 3
+  if ! command -v curl >/dev/null 2>&1; then
+    echo "本地未找到 tgz 包且 curl 未安装, 无法远程拉取" >&2
+    exit 3
+  fi
+  TMP_DIR=$(mktemp -d)
+  TGZ_FILE="$TMP_DIR/mtuser-pt-passport-${PT_PASSPORT_VERSION}.tgz"
+  echo "本地未找到 tgz 包, 从 Gitee raw 拉取 v${PT_PASSPORT_VERSION}..."
+  if ! curl -fsSL "$GITEE_RAW_URL" -o "$TGZ_FILE"; then
+    echo "远程拉取失败: $GITEE_RAW_URL" >&2
+    exit 3
+  fi
 fi
 
 # 从源文件名提取版本号，兼容 .tgz 和 .tgz.txt
@@ -45,7 +65,6 @@ fi
 # .tgz.txt 形态：复制成临时真 .tgz 喂给 npm（npm 看扩展名识别包格式）
 if [ -z "$TGZ_FILE" ]; then
   TMP_DIR=$(mktemp -d)
-  trap 'rm -rf "$TMP_DIR"' EXIT
   TGZ_FILE="$TMP_DIR/mtuser-pt-passport-$BUNDLE_VERSION.tgz"
   cp "$TXT_FILE" "$TGZ_FILE"
 fi
