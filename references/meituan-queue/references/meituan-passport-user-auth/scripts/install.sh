@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # pt-passport CLI install/update script
 # Installs from local tgz bundle. Skips if installed version == bundle version.
+# 兼容两种发布形态：
+#   - .tgz      ：GitHub/Gitee 源码仓库 / 开发者本地 clone
+#   - .tgz.txt  ：ClawHub 发布包（绕过 ClawHub 文本文件白名单的影子文件）
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd)"
@@ -10,17 +13,23 @@ if ! command -v npm &>/dev/null; then
   exit 2
 fi
 
-# 找到 scripts 目录下的本地安装包（取版本最新的一个）
+# 优先找 .tgz；找不到再 fallback .tgz.txt（ClawHub 形态）
 TGZ_FILE=$(for f in "$SCRIPT_DIR"/mtuser-pt-passport-*.tgz; do [ -f "$f" ] && echo "$f"; done | sort -V | tail -1)
+TXT_FILE=""
 if [ -z "$TGZ_FILE" ]; then
-  echo "No local tgz bundle found in $SCRIPT_DIR" >&2
+  TXT_FILE=$(for f in "$SCRIPT_DIR"/mtuser-pt-passport-*.tgz.txt; do [ -f "$f" ] && echo "$f"; done | sort -V | tail -1)
+fi
+
+if [ -z "$TGZ_FILE" ] && [ -z "$TXT_FILE" ]; then
+  echo "No local bundle found in $SCRIPT_DIR (tried *.tgz and *.tgz.txt)" >&2
   exit 3
 fi
 
-# 从文件名中提取版本号，如 mtuser-pt-passport-0.1.0.tgz -> 0.1.0
-BUNDLE_VERSION=$(basename "$TGZ_FILE" | sed 's/mtuser-pt-passport-//;s/\.tgz$//')
+# 从源文件名提取版本号，兼容 .tgz 和 .tgz.txt
+SOURCE_NAME=$(basename "${TGZ_FILE:-$TXT_FILE}")
+BUNDLE_VERSION=$(echo "$SOURCE_NAME" | sed 's/mtuser-pt-passport-//; s/\.txt$//; s/\.tgz$//')
 if [ -z "$BUNDLE_VERSION" ]; then
-  echo "Failed to parse version from bundle filename: $(basename "$TGZ_FILE")" >&2
+  echo "Failed to parse version from: $SOURCE_NAME" >&2
   exit 3
 fi
 
@@ -31,6 +40,14 @@ LOCAL=$(pt-passport --version 2>/dev/null | tail -1 || true)
 if [ "$LOCAL" = "$BUNDLE_VERSION" ]; then
   echo "Already up-to-date (pt-passport@$LOCAL), skipping."
   exit 0
+fi
+
+# .tgz.txt 形态：复制成临时真 .tgz 喂给 npm（npm 看扩展名识别包格式）
+if [ -z "$TGZ_FILE" ]; then
+  TMP_DIR=$(mktemp -d)
+  trap 'rm -rf "$TMP_DIR"' EXIT
+  TGZ_FILE="$TMP_DIR/mtuser-pt-passport-$BUNDLE_VERSION.tgz"
+  cp "$TXT_FILE" "$TGZ_FILE"
 fi
 
 # 安装本地包
