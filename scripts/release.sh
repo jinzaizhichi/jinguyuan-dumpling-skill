@@ -5,12 +5,12 @@
 # 示例:  scripts/release.sh 0.5.10
 #
 # 行为:
-#   1. 校验工作区干净 + 在 main 分支 + 三个 remote (gitee/github/clawhub) 都在
+#   1. 校验工作区干净 + 在 main 分支 + 两个 git remote (gitee/github) 都在 + clawhub CLI 已登录
 #   2. 同步改 skill.json + SKILL.md 的版本号
 #   3. commit + 打 tag v<version>
 #   4. push gitee  main + tag
 #   5. push github main + tag (走 127.0.0.1:1087 代理)
-#   6. push clawhub main + tag
+#   6. clawhub skill publish . --version <version> (发布到 ClawHub Skill Registry)
 #   7. 验证 shields.io 是否返回新 tag
 #
 # 失败时终止，不进入下一步。
@@ -19,7 +19,7 @@ set -euo pipefail
 
 GITHUB_PROXY="http://127.0.0.1:1087"
 REPO_PATH="JinGuYuan/jinguyuan-dumpling-skill"
-REMOTES=(gitee github clawhub)
+GIT_REMOTES=(gitee github)
 
 # ------- 参数与环境校验 -------
 if [[ $# -ne 1 ]]; then
@@ -49,14 +49,26 @@ if [[ "$CURRENT_BRANCH" != "main" ]]; then
   exit 1
 fi
 
-# 校验三个 remote 都已配置
-for r in "${REMOTES[@]}"; do
+# 校验两个 git remote 都已配置
+for r in "${GIT_REMOTES[@]}"; do
   if ! git remote get-url "$r" >/dev/null 2>&1; then
     echo "错误: 缺少 git remote: $r" >&2
     echo "      请先 git remote add $r <url>" >&2
     exit 1
   fi
 done
+
+# 校验 clawhub CLI 已安装且已登录
+if ! command -v clawhub >/dev/null 2>&1; then
+  echo "错误: clawhub CLI 未安装" >&2
+  echo "      请先 npm i -g clawhub" >&2
+  exit 1
+fi
+if ! clawhub whoami >/dev/null 2>&1; then
+  echo "错误: clawhub 未登录" >&2
+  echo "      请先 clawhub login" >&2
+  exit 1
+fi
 
 TAG="v$NEW_VERSION"
 if git rev-parse "$TAG" >/dev/null 2>&1; then
@@ -104,10 +116,31 @@ echo "==> push github (proxy: $GITHUB_PROXY)"
 git -c http.proxy="$GITHUB_PROXY" -c https.proxy="$GITHUB_PROXY" push github main
 git -c http.proxy="$GITHUB_PROXY" -c https.proxy="$GITHUB_PROXY" push github "$TAG"
 
-# ------- 5. push clawhub -------
-echo "==> push clawhub"
-git push clawhub main
-git push clawhub "$TAG"
+# ------- 5. publish clawhub -------
+# clawhub publish 是按目录打包上传到公开 registry,
+# 为避免 .notes/ 这类工作区私房本被上传, 发布前临时挪走, 发完恢复。
+# 使用 trap 保证异常退出时也能恢复。
+NOTES_DIR="$ROOT/.notes"
+NOTES_STASH=""
+restore_notes() {
+  if [[ -n "$NOTES_STASH" && -d "$NOTES_STASH" && ! -e "$NOTES_DIR" ]]; then
+    mv "$NOTES_STASH" "$NOTES_DIR"
+    echo "==> .notes/ 已恢复"
+  fi
+}
+if [[ -d "$NOTES_DIR" ]]; then
+  NOTES_STASH="$(mktemp -d -t jinguyuan-notes.XXXXXX)/.notes"
+  mkdir -p "$(dirname "$NOTES_STASH")"
+  mv "$NOTES_DIR" "$NOTES_STASH"
+  trap restore_notes EXIT
+  echo "==> .notes/ 已临时挪走 ($NOTES_STASH), 发布后自动恢复"
+fi
+
+echo "==> clawhub publish (version: $NEW_VERSION)"
+clawhub publish . --version "$NEW_VERSION" --tags latest
+
+restore_notes
+trap - EXIT
 
 # ------- 6. 验证 shields.io -------
 echo "==> 验证 shields.io 徽章"
