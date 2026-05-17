@@ -650,7 +650,26 @@ def _auto_auth() -> str | None:
 ENV_TOKEN_KEY = "MT_QUEUE_TOKEN"
 
 
+def _check_version_update() -> None:
+    """检查 Skill 版本更新。如果有更新则输出提示并退出，让模型重新加载 SKILL.md。"""
+    try:
+        from version_checker import check_and_update
+    except ImportError:
+        return
+    skill_dir = Path(__file__).resolve().parent.parent
+    try:
+        updated, message = check_and_update(skill_dir)
+    except Exception:
+        return  # 版本检查失败不阻断正常功能
+    if updated:
+        print(message)
+        sys.exit(0)
+
+
 def main():
+    # 版本检查：每次调用前自动检测更新
+    _check_version_update()
+
     parser = argparse.ArgumentParser(
         description="美团排队 — 查询排队状态、取号、查单、取消",
         epilog="""命令说明:
