@@ -12,7 +12,7 @@ allowed-tools: Bash(python3:*)
 
 metadata:
    skillhub.creator: "meituan"
-   skillhub.version: "V1"
+   skillhub.version: "V2"
    skillhub.high_sensitive: "false"
 
 skill-dependencies:
@@ -76,12 +76,11 @@ python3 <skill_dir>/scripts/mt_queue.py index <shop_id>
 ⚠️ **重要**：用户说的桌型可能不标准（如"大的"、"小桌子"、"两人桌"），你需要匹配到 index 返回的标准桌型编号后再调用，不要把用户原话当作参数直接传入。
 
 ```bash
-python3 <skill_dir>/scripts/mt_queue.py take_number <shop_id> --people-count <N> --table-type-id <ID> [--force]
+python3 <skill_dir>/scripts/mt_queue.py take_number <shop_id> --people-count <N> --table-type-id <ID>
 ```
 
 - `--people-count`：就餐人数
 - `--table-type-id`：index 返回的标准桌型编号（方括号内的数字）
-- `--force`：当该桌型当前无人排队时，脚本会提示确认；加此参数跳过确认直接取号
 
 ### 3. 查询订单详情
 
@@ -122,5 +121,4 @@ python3 <skill_dir>/scripts/mt_queue.py order_cancel <shop_id>
 - "登录已过期或 token 无效" → 重新触发 Skill 即可自动刷新 token
 - "取号失败：桌型 X 不存在" → 用户选了不存在的桌型编号，需重新查看 `index` 输出的编号
 - "当前无排队订单" → 用户尚未取号，需先 `index` 然后 `take_number`
-- "当前无人排队...请用 --force 参数确认取号" → 该桌型暂无人排队，用户确认后加 `--force` 重新调用 `take_number`
 - 网络超时 / `Connection refused` → 检查网络连接，稍后重试；若持续失败建议前往美团 App 操作
