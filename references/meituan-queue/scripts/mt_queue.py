@@ -33,6 +33,11 @@ class QueueAPIError(Exception):
     pass
 
 
+class QueueOrderLookupError(Exception):
+    """查询当前排队订单失败或没有可用订单。"""
+    pass
+
+
 # ---------------------------------------------------------------------------
 # API Client (stdlib only: urllib)
 # ---------------------------------------------------------------------------
@@ -150,7 +155,7 @@ def _format_order_detail(d: dict, shop_id: int) -> str:
     status_code = d.get("queueOrderStatus", 0)
     status = STATUS_MAP.get(status_code, f"未知({status_code})")
     wait_table_num = d.get("queueWaitTableNum", 0)
-    will_wait = d.get("willWaitTime") or -1
+    will_wait = d.get("willWaitTime")
     will_wait_desc = d.get("willWaitTimeDesc") or ""
 
     lines = [
@@ -162,7 +167,7 @@ def _format_order_detail(d: dict, shop_id: int) -> str:
 
     lines.append(f"前方等待：{wait_table_num}桌")
 
-    if will_wait > 0 and will_wait_desc:
+    if will_wait is not None and will_wait > 0 and will_wait_desc:
         lines.append(f"预计等待：约{will_wait_desc}分钟")
 
     return "\n".join(lines)
@@ -327,17 +332,17 @@ def cmd_take_number(
         )
 
 
-def _get_latest_order_view_id(client: QueueClient, shop_id: int) -> tuple[str | None, str | None]:
+def _get_latest_order_view_id(client: QueueClient, shop_id: int) -> str:
     """Helper: fetch index_v2 and extract the latest orderViewId."""
     index_resp = client.get("queueIndexV2", params={"dpShopId": shop_id})
     if index_resp.get("code") is not None and index_resp.get("code") != 200:
         err = index_resp.get("errMsg") or f"请求失败（code={index_resp.get('code')}）"
-        return f"查询订单失败：{err}", None
+        raise QueueOrderLookupError(f"查询订单失败：{err}")
     data = index_resp.get("data") or {}
     orders = data.get("userQueueOrders") or []
 
     if not orders:
-        return "当前无排队订单。", None
+        raise QueueOrderLookupError("当前无排队订单。")
 
     latest = orders[0]
     order_view_id = (
@@ -346,16 +351,17 @@ def _get_latest_order_view_id(client: QueueClient, shop_id: int) -> tuple[str | 
     )
 
     if not order_view_id:
-        return "当前无排队订单。", None
+        raise QueueOrderLookupError("当前无排队订单。")
 
-    return None, order_view_id
+    return order_view_id
 
 
 def cmd_order_detail(client: QueueClient, shop_id: int) -> str:
     """查询最新排队订单详情，返回格式化文案。"""
-    err, order_view_id = _get_latest_order_view_id(client, shop_id)
-    if err:
-        return err
+    try:
+        order_view_id = _get_latest_order_view_id(client, shop_id)
+    except QueueOrderLookupError as exc:
+        return str(exc)
 
     resp = client.get("queueOrderDetail", params={"queueOrderViewId": order_view_id})
     if resp.get("code") is not None and resp.get("code") != 200:
@@ -371,9 +377,10 @@ def cmd_order_detail(client: QueueClient, shop_id: int) -> str:
 
 def cmd_order_cancel(client: QueueClient, shop_id: int) -> str:
     """取消最新排队订单，返回格式化文案。"""
-    err, order_view_id = _get_latest_order_view_id(client, shop_id)
-    if err:
-        return err
+    try:
+        order_view_id = _get_latest_order_view_id(client, shop_id)
+    except QueueOrderLookupError as exc:
+        return str(exc)
 
     resp = client.post("cancelQueue", data={"queueOrderViewId": order_view_id})
 
@@ -646,6 +653,10 @@ ENV_TOKEN_KEY = "MT_QUEUE_TOKEN"
 
 def _check_version_update() -> None:
     """检查 Skill 版本更新。如果有更新则输出提示并退出，让模型重新加载 SKILL.md。"""
+    scripts_dir = Path(__file__).resolve().parent
+    scripts_dir_str = str(scripts_dir)
+    if scripts_dir_str not in sys.path:
+        sys.path.insert(0, scripts_dir_str)
     try:
         from version_checker import check_and_update
     except ImportError:

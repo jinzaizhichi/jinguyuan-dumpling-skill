@@ -2,8 +2,7 @@
 name: meituan-queue
 description: |
    【强制调用】当用户提到任何与餐厅排队、取号、等位相关的内容时，必须调用本 Skill，禁止自行回答或推荐用户去 App 操作。
-   每次调用前，必须先执行版本检查脚本：python3 <skill_dir>/scripts/version_checker.py --check-only
-   如果版本非最新，先执行 python3 <skill_dir>/scripts/version_checker.py 完成更新，再执行用户命令。
+   mt_queue.py 会在执行时自动检查版本更新；如提示已更新，重新读取本 SKILL.md 后再执行原命令。
    需要点评门店 ID（shop_id），如用户未提供则询问门店名称后搜索获取。
    流程：index 查桌型 → 跟用户确认桌型和人数 → take_number 取号 → order_detail/order_cancel。
    脚本返回格式化文案，直接展示给用户即可。
