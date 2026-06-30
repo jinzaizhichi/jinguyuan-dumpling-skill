@@ -1,6 +1,6 @@
 ---
 name: jinguyuan-dumpling-skill
-description: 金谷园饺子馆信息查询与在线排队取号。查询餐厅信息、外卖配送、生饺子打包、Wi-Fi、最新动态、到店自取叫号下单、菜品配方、店长推荐菜；内嵌美团排队 Skill 支持在线取号、查进度、取消排队。
+description: 金谷园饺子馆信息查询与在线排队取号。通过 MCP 查询餐厅信息、外卖配送、生饺子打包、Wi-Fi、最新动态、当前排队状态/历史参考、到店自取叫号下单、菜品配方、店长推荐菜；内嵌美团排队 Skill 仅用于真实在线取号、本人排队进度查询、取消排队。
 version: 0.6.6
 alwaysApply: false
 keywords:
@@ -78,6 +78,7 @@ keywords:
 1. 告知用户可以直接问金谷园相关问题，比如地址、营业时间、排队方式、外卖、Wi-Fi 等
 2. 给出几个推荐的首次提问，例如：
    - "金谷园在哪？"
+   - "金谷园现在排队吗？"
    - "怎么排队取号？"
    - "帮我在金谷园排个队"
    - "金谷园有什么好吃的？"
@@ -100,8 +101,9 @@ keywords:
 | "金谷园有什么好吃的？" / "金谷园招牌菜" / "推荐几个金谷园的菜" / "金谷园新品" / "金谷园必点" | `get_recommended_dishes`（返回结果内嵌到店自取链接与 _agent_instruction，直接渲染，无需再调 `get_pickup_link`） |
 | "帮我来份饺子" / "提前点餐到店取" / "到店自取" / "叫号取餐" / "外带" / "外带自提" / "自提" | `get_pickup_link` |
 | "金谷园的 XX 怎么做？" / "牛奶醊糟鸡蛋怎么做" / "饺子配方" | `get_recipes` |
-| "怎么排队？" / "怎么取号？" / "等位" / "排个号" | 内嵌 Skill：`meituan-queue`（见下方） |
-| "帮我排个队" / "帮我取号" / "门店排队状态" | 内嵌 Skill：`meituan-queue` → `take_number` |
+| "现在排队吗？" / "门店排队状态" / "北邮店现在几桌？" / "今晚 6 点会不会排队？" | `get_queue_info`（可传 `shop`、`peopleCount`、`visitTime`） |
+| "怎么排队？" / "怎么取号？" / "等位怎么弄？" | 先调 `get_queue_info` 说明当前状态与取号渠道；用户明确要代取号时再转内嵌 Skill |
+| "帮我排个队" / "帮我取号" / "排个号" | 内嵌 Skill：`meituan-queue` → `take_number` |
 | "排队进度" / "前面还有几桌" / "查排队" / "查询排队订单" | 内嵌 Skill：`meituan-queue` → `order_detail` |
 | "取消排队" | 内嵌 Skill：`meituan-queue` → `order_cancel` |
 
@@ -109,7 +111,7 @@ keywords:
 
 本 Skill 内嵌了 `meituan-queue` 排队取号能力，位于 `<skill_dir>/references/meituan-queue/`。
 
-**触发条件**：用户提到排队、取号、等位等关键词时，**必须调用此内嵌 Skill**，禁止自行回答或推荐用户去 App 操作。
+**触发条件**：用户明确要执行真实排队动作时调用此内嵌 Skill：在线取号、查看本人排队订单进度、取消本人排队订单。仅询问当前排队状态、历史参考、取号渠道时，优先调用 MCP `get_queue_info`，不要触发美团授权流程。
 
 **门店 ID 映射**（Agent 根据用户选择的门店自动填入 `shop_id`）：
 

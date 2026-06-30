@@ -2,7 +2,7 @@
 
 ![Version](https://img.shields.io/github/v/tag/JinGuYuan/jinguyuan-dumpling-skill?label=version&color=blue&sort=semver) ![License](https://img.shields.io/badge/license-MIT-green) ![MCP](https://img.shields.io/badge/protocol-MCP-purple) ![Transport](https://img.shields.io/badge/transport-Streamable%20HTTP-orange)
 
-这是一个 AI Skill——安装后，你的 AI 助手就能查询金谷园饺子馆的信息：在哪吃、几点开门、怎么排队、能不能外卖、生饺子怎么煮、Wi-Fi 密码是什么。还能直接帮你在美团上排队取号。
+这是一个 AI Skill——安装后，你的 AI 助手就能查询金谷园饺子馆的信息：在哪吃、几点开门、现在排不排队、能不能外卖、生饺子怎么煮、Wi-Fi 密码是什么。还能直接帮你在美团上排队取号。
 
 快20年的饺子馆，现在有了自己的AI服务。
 
@@ -19,23 +19,30 @@
 
 ## 这个 Skill 能做什么
 
-金谷园饺子馆的官方信息服务，包含多项 MCP 查询/下单能力 + 1 项内嵌排队能力（完整工具列表以 `tools/list` 返回为准）：
+金谷园饺子馆的官方信息服务，可以查店、查活动、查推荐菜，也能处理到店自取和排队取号这些具体场景：
 
-| 能力 | 你可以问 | 来源 |
-|------|----------|------|
-| 餐厅信息 | "金谷园在哪？""几点开门？" | MCP |
-| 外卖服务 | "能送外卖吗？""怎么点外卖？" | MCP |
-| 生饺子打包 | "能打包吗？""生饺子怎么煮？" | MCP |
-| 店内Wi-Fi | "Wi-Fi密码多少？" | MCP |
-| 最新消息 | "有什么新活动？" | MCP |
-| 推荐菜 | "有什么好吃的？""今天吃什么""招牌菜" | MCP |
-| **到店自取** | "帮我来份饺子""提前点餐到店取" | MCP |
-| 菜品配方 | "金谷园的 XX 怎么做？" | MCP |
-| **在线排队取号** | "帮我排个队""取消排队""排队进度" | 内嵌 Skill |
+| 能力 | 你可以问 |
+|------|----------|
+| 餐厅信息 | "金谷园在哪？""几点开门？" |
+| 外卖服务 | "能送外卖吗？""怎么点外卖？" |
+| 生饺子打包 | "能打包吗？""生饺子怎么煮？" |
+| 店内Wi-Fi | "Wi-Fi密码多少？" |
+| 最新消息 | "有什么新活动？" |
+| 排队状态 | "现在排队吗？""今晚 6 点会不会排队？" |
+| 推荐菜 | "有什么好吃的？""今天吃什么""招牌菜" |
+| **到店自取** | "帮我来份饺子""提前点餐到店取" |
+| 菜品配方 | "金谷园的 XX 怎么做？" |
+| **在线排队取号** | "帮我排个队""取消排队""排队进度" |
+
+## 和 MCP 的关系
+
+金谷园的信息能力本身由 MCP 服务提供，端点是 `https://mcp.jinguyuan.cloud`。
+
+懂 MCP 的 Agent 可以直接接入这个地址；安装本 Skill 的好处，是让 AI 助手更懂金谷园的用户场景、说话方式，以及什么时候该查信息、什么时候该帮你处理真实排队动作。
 
 ## 在线排队取号
 
-本 Skill 内嵌了基于**美团排队**的取号能力，AI 助手可以直接帮你完成排队全流程，无需打开美团 App。
+本 Skill 内嵌了基于**美团排队**的取号能力，AI 助手可以直接帮你完成取号、查本人订单、取消排队等动作，无需打开美团 App。
 
 **支持的操作：**
 
@@ -111,14 +118,13 @@ git clone https://gitee.com/JinGuYuan/jinguyuan-dumpling-skill.git \
 - GitHub：https://github.com/JinGuYuan/jinguyuan-dumpling-skill
 - Gitee：https://gitee.com/JinGuYuan/jinguyuan-dumpling-skill
 
-## 技术协议
+## 给 Agent 的接入信息
 
 | 项目 | 说明 |
 |------|------|
-| 协议 | MCP (Model Context Protocol) |
-| 传输 | Streamable HTTP |
 | MCP 端点 | https://mcp.jinguyuan.cloud |
-| 部署 | Tencent CloudBase 云函数 |
+| Skill 配置 | [`skill.json`](./skill.json) |
+| 工具清单 | 以 MCP `tools/list` 返回为准 |
 
 ## 版本
 
