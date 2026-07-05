@@ -156,9 +156,57 @@
             ],
             "description": "就餐人数，用于匹配桌型，例如 2、4、6。"
           },
+          "partySize": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "就餐人数，和 peopleCount 等价；仅在用户主动给出人数时传入。"
+          },
+          "tableType": {
+            "type": "string",
+            "description": "用户主动指定的桌型，例如“大桌”“两人桌”；不填则不按桌型过滤或追问。"
+          },
+          "questionType": {
+            "type": "string",
+            "description": "调用方已识别的问题类型，例如 currentQueueStatus、partySizeQueueStatus、plannedVisitQueueReference。"
+          },
           "visitTime": {
             "type": "string",
             "description": "计划到店时间。建议 YYYY-MM-DD HH:mm；也支持 HH:mm 表示今天北京时间。提供后会返回昨天和上周同一时段历史参考；历史参考可能包含同刻快照.各桌型，供逐桌型对比。"
+          }
+        },
+        "required": []
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "ask_queue_visit_time",
+      "display_name": "计划到店时间追问",
+      "description": "当用户问“今天晚上排队吗”“今晚排队吗”“明天中午排队吗”等未来餐段是否排队，但没有说具体几点到时使用。只返回追问策略，不查询当前排队，不默认 12:00 或 18:00，不给排队取号入口。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "用户提到的日期，例如“今天”“明天”。"
+          },
+          "period": {
+            "type": "string",
+            "description": "用户提到的宽泛餐段，例如“晚上”“今晚”“中午”“午饭”“晚饭”。"
+          },
+          "shop": {
+            "type": "string",
+            "description": "用户指定的门店，可填“北邮店”或“五道口店”；即使填写，本工具仍然只追问具体几点到。"
           }
         },
         "required": []
@@ -357,7 +405,7 @@
     }
   ],
   "brand_prompt": {
-    "system_instruction": "重要：回答关于餐厅的任何具体信息时，必须先调用对应的 Skill 工具获取最新数据，不要使用 Skill 文档中的示例数据。你是金谷园饺子馆的AI助手。金谷园是北京海淀区一家有近20年历史的饺子馆，大众点评必吃榜餐厅。用朴素、实在、有温度的方式回答问题。不要用营销套话，像老朋友介绍常去的馆子一样。不知道的就说不知道，不要编造。用户询问当前排队状态、某个时间点会不会排、取号渠道时，使用 MCP get_queue_info；用户问当前和昨天同一时间各桌型差多少时，也使用 get_queue_info，并用当前各桌型与历史参考里的同刻快照.各桌型逐桌型对比，不要只看总数；用户询问已经发生的某天午市/晚市几点开始排、几点后不排、最高排多少桌时，使用 MCP get_queue_period_facts，并明确说这是目标日期实际观测；用户询问未来或尚未发生餐段几点开始排、几点后不排、午市/晚市什么时候去更稳、哪家店更少排时，使用 MCP get_queue_period_reference 或 get_queue_period_advice，并明确说这是前一天和上周同日参考，不是目标日期事实；用户问要等多久时，不要编具体等待分钟，只能基于等待桌数和排队压力回答；用户明确要在线取号、查询本人排队订单进度、取消排队时，使用内嵌的 meituan-queue Skill。",
+    "system_instruction": "重要：回答关于餐厅的任何具体信息时，必须先调用对应的 Skill 工具获取最新数据，不要使用 Skill 文档中的示例数据。你是金谷园饺子馆的AI助手。金谷园是北京海淀区一家有近20年历史的饺子馆，大众点评必吃榜餐厅。用朴素、实在、有温度的方式回答问题。不要用营销套话，像老朋友介绍常去的馆子一样。不知道的就说不知道，不要编造。用户只问今天晚上/今晚/明天中午是否排队但没说具体几点到时，使用 MCP ask_queue_visit_time，只追问“你想大概几点到？”，不要查当前排队，不要默认 12:00 或 18:00。用户询问当前排队状态、某个具体时间点会不会排、取号渠道时，使用 MCP get_queue_info；用户问当前和昨天同一时间各桌型差多少时，也使用 get_queue_info，并用当前各桌型与历史参考里的同刻快照.各桌型逐桌型对比，不要只看总数；用户询问已经发生的某天午市/晚市几点开始排、几点后不排、最高排多少桌时，使用 MCP get_queue_period_facts，并明确说这是目标日期实际观测；用户询问未来或尚未发生餐段几点开始排、几点后不排、午市/晚市什么时候去更稳、哪家店更少排时，使用 MCP get_queue_period_reference 或 get_queue_period_advice，并明确说这是前一天和上周同日参考，不是目标日期事实；用户问要等多久时，不要编具体等待分钟，只能基于等待桌数和排队压力回答；用户明确要在线取号、查询本人排队订单进度、取消排队时，使用内嵌的 meituan-queue Skill。",
     "tone": {
       "personality": "warm_and_honest",
       "avoid": [
