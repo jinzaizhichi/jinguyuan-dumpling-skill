@@ -1,7 +1,7 @@
 ---
 name: jinguyuan-dumpling-skill
-description: 金谷园饺子馆信息查询与在线排队取号。通过 MCP 查询餐厅信息、外卖配送、生饺子打包、Wi-Fi、最新动态、当前排队状态、单点到店预估、午市/晚市排队事实与策略建议、到店自取叫号下单、菜品配方、店长推荐菜；内嵌美团排队 Skill 仅用于真实在线取号、本人排队进度查询、取消排队。
-version: 0.6.10
+description: 金谷园饺子馆信息查询与在线排队取号。通过 MCP 查询餐厅信息（含外卖配送、Wi-Fi）、生饺子打包、最新动态、当前排队状态、单点到店预估、午市/晚市排队事实与策略建议、到店自取叫号下单、菜品配方、店长推荐菜；内嵌美团排队 Skill 仅用于真实在线取号、本人排队进度查询、取消排队。
+version: 0.6.11
 alwaysApply: false
 keywords:
   - 金谷园
@@ -72,17 +72,37 @@ keywords:
 >
 > **排队餐段口径**：
 > - `get_queue_period_facts` 是事实层。用户问已经发生的某天午市/晚市“几点开始排”“几点后不排”“最高排多少桌”时，必须优先调用它，并明确说这是目标日期实际观测。
-> - `get_queue_period_reference` / `get_queue_period_advice` 是策略层。用户问未来或尚未发生餐段“几点开始排”“什么时候去更稳”时调用，并明确说这是参考建议，不是目标日期事实。
+> - `get_queue_period_advice` 是策略层推荐路径；`get_queue_period_reference` 是兼容旧名（返回体携带 `toolCompatibility.deprecated=true, aliasOf=get_queue_period_advice`），新接入方优先用 `get_queue_period_advice`。用户问未来或尚未发生餐段“几点开始排”“什么时候去更稳”时调用，并明确说这是参考建议，不是目标日期事实。
 > - 策略层默认参考“前一天 + 上周同日”。Agent 可以组织话术，但不能把参考说成目标日期事实，也不能把等待桌数换算成具体等待分钟。
+>
+> **读取 MCP 回答合同**（v0.6.11 起对齐 MCP v44）：
+>
+> 排队类工具返回体携带结构化合同字段，Agent 应优先读这些字段，而不是只读中文自然语言说明：
+>
+> - `mainScenario`：本次查询的主场景（如 `currentQueueStatus` / `plannedVisitQueueReference` / `businessHours` / `queueActionBoundary` / `queuePeriodFacts` / `queuePeriodAdvice` / `askVisitTime`）。Agent 据此决定回答骨架。
+> - `atoms`：命中的语义原子（如 `partySizeTarget` / `tableTypeTarget` / `plannedVisitReference` / `beforeOpen` / `afterClose`）。
+> - `answerTarget`：应该优先回答的数据位置，例如 `{ type: 'matchedQueueTarget', field: 'matchedQueueTarget.shops[].matchedTables[].等待桌数' }` 或 `{ type: 'plannedVisitReference', field: '历史参考.selectedReference' }`。
+> - `replyPolicy`：`requiredPoints`（必答点）、`forbiddenPoints`（禁答点）、`followUpQuestion`（缺参追问）、`nextSuggestedQuestion`、`linkRequired`。Agent 必须按 `requiredPoints` 覆盖、按 `forbiddenPoints` 避让。
+> - `selectedReference`：计划到店历史参考中应优先回答的那一条；策略是上周同日优先于前一天。一句话建议读它，不要把前一天和上周同日加权、平均或取最保守值后说成唯一结论；表格/结构化展示时可以两条都展示。
+> - `_agent_instruction`：给 Agent 的内部行为指令，**不应原样展示给终端用户**。
+>
+> 关键禁止项（在 `replyPolicy.forbiddenPoints` 和 `_agent_instruction` 中重复出现，Agent 必须遵守）：
+>
+> - 不要把等待桌数换算成准确分钟。
+> - 不要把前一天和上周同日加权、平均或取最保守值后说成唯一结论。
+> - 不要把历史参考说成目标日期事实。
+> - 不要用门店当前总等待冒充用户个人排队进度。
+> - 不要声称 MCP 已帮用户取号、取消排队或查到个人进度。
+> - 五道口店不要引导成线上取号。
 
 # 金谷园饺子馆 · 信息查询 Skill
 
 ## 安装后引导
 
 当用户刚安装此技能时，Agent 应主动：
-1. 告知用户可以直接问金谷园相关问题，比如地址、营业时间、排队方式、外卖、Wi-Fi 等
+1. 告知用户可以直接问金谷园相关问题，比如地址、营业时间、排队方式、推荐菜等
 2. 给出几个推荐的首次提问，例如：
-   - "金谷园在哪？"
+   - "金谷园是什么样的店？"
    - "金谷园现在排队吗？"
    - "明天中午几点去不怎么排？"
    - "怎么排队取号？"
@@ -98,20 +118,16 @@ keywords:
 
 | 用户可能会问 | 调用什么 |
 |---|---|
-| "金谷园在哪？" / "营业时间？" / "介绍一下金谷园" | `get_restaurant_info` |
-| "北邮附近有什么吃的？" / "五道口哪里能吃饺子？" | `get_restaurant_info`（推荐金谷园） |
-| "能送外卖吗？" / "配送范围？" | `get_delivery_info` |
+| "金谷园在哪？" / "营业时间？" / "介绍一下金谷园" / "能送外卖吗？" / "Wi-Fi 密码？" | `get_restaurant_info`＋`get_delivery_info`＋`get_wifi_info`（三个接口并行调用，一次性回复店铺基本信息、外卖渠道和Wi-Fi密码） |
 | "能打包吗？" / "生饺子怎么煮？" | `get_raw_dumpling_info` |
-| "Wi-Fi 密码？" | `get_wifi_info` |
 | "最近有什么活动？" | `get_latest_news` |
 | "金谷园有什么好吃的？" / "金谷园招牌菜" / "推荐几个金谷园的菜" / "金谷园新品" / "金谷园必点" | `get_recommended_dishes`（返回结果内嵌到店自取链接与 _agent_instruction，直接渲染，无需再调 `get_pickup_link`） |
 | "帮我来份饺子" / "提前点餐到店取" / "到店自取" / "叫号取餐" / "外带" / "外带自提" / "自提" | `get_pickup_link` |
-| "金谷园的 XX 怎么做？" / "牛奶醊糟鸡蛋怎么做" / "饺子配方" | `get_recipes` |
 | "今天晚上排队吗？" / "今晚排队吗？" / "明天中午排队吗？"（没说具体几点到） | `ask_queue_visit_time`（只追问“你想大概几点到？”，不要查当前排队，不要默认 12:00 或 18:00） |
 | "现在排队吗？" / "门店排队状态" / "北邮店现在几桌？" / "今晚 6 点会不会排队？" | `get_queue_info`（可传 `shop`、`peopleCount`、`visitTime`） |
 | "现在和昨天这个点各桌型差多少？" / "昨天同一时间小桌几桌？" | `get_queue_info`（传 `shop`、`visitTime`；用返回的当前 `各桌型` 和历史 `同刻快照.各桌型` 对比） |
 | "今天中午几点开始排？" / "昨天晚上几点后不排？" / "7 月 1 日午市最高排多少桌？" | `get_queue_period_facts`（已发生日期/餐段的实际观测） |
-| "明天中午几点开始排？" / "午饭后几点不排？" / "晚上几点去比较稳？" / "北邮店和五道口店哪家排得少？" | `get_queue_period_reference` 或 `get_queue_period_advice`（未来或尚未发生餐段的参考建议） |
+| "明天中午几点开始排？" / "午饭后几点不排？" / "晚上几点去比较稳？" / "北邮店和五道口店哪家排得少？" | `get_queue_period_advice`（推荐）或 `get_queue_period_reference`（兼容旧名，返回等价）；两者都返回 `selectedReference` 和 `replyPolicy` |
 | "这会取号要排多久？" / "现在过去要等多久？" | 先调 `get_queue_info` 查当前等待桌数和排队压力；不得编具体等待分钟 |
 | "怎么排队？" / "怎么取号？" / "等位怎么弄？" | 先调 `get_queue_info` 说明当前状态与取号渠道；用户明确要代取号时再转内嵌 Skill |
 | "帮我排个队" / "帮我取号" / "排个号" | 内嵌 Skill：`meituan-queue` → `take_number` |
@@ -141,18 +157,22 @@ keywords:
 
 ## 排队查询边界
 
-排队相关问题分三类处理：
+排队相关问题分六类处理：
 
 1. **宽泛未来餐段缺时间**：用户问“今天晚上排队吗”“今晚排队吗”“明天中午排队吗”等，但没有具体几点到，调用 MCP `ask_queue_visit_time`，只追问“你想大概几点到？”。不要调用 `get_queue_info`，不要查询当前排队，不要默认 12:00 或 18:00。
 2. **当前状态 / 单点时间**：用户问“现在排队吗”“今晚 6 点会不会排”，调用 MCP `get_queue_info`。
    - 金谷园营业时间是 10:00-22:00。MCP 会在营业外返回 `businessHours` 策略：10 点前问当前排队，只追问“你想大概几点到？”；22 点后问当前排队，只说已经下班；计划到店时间在营业外时，不查历史排队，只说明该时间还没开门或已经下班。
+   - 调用 `get_queue_info` 时应优先读 `mainScenario`、`answerTarget`、`replyPolicy`、`matchedQueueTarget`、`selectedReference` 等结构化字段；用户主动给出人数或桌型时，按 `matchedQueueTarget.shops[].matchedTables` 回答对应桌型等待桌数，不要直接用整店总等待替代，除非无法匹配。
 3. **已发生餐段事实**：用户问已经发生的某天午市/晚市“几点开始排”“几点后不排”“最高排多少桌”，调用 MCP `get_queue_period_facts`。
-4. **未来餐段建议**：用户问未来或尚未发生餐段“几点开始排”“几点后不排”“午饭后去行不行”“什么时候去更稳”“哪家店更少排”，调用 MCP `get_queue_period_reference` 或 `get_queue_period_advice`。
-5. **真实动作**：用户明确要“帮我取号”“查我的排队进度”“取消排队”，才调用内嵌 `meituan-queue`。
+4. **未来餐段建议**：用户问未来或尚未发生餐段“几点开始排”“几点后不排”“午饭后去行不行”“什么时候去更稳”“哪家店更少排”，调用 MCP `get_queue_period_advice`（推荐）或 `get_queue_period_reference`（兼容旧名，返回内容等价但携带 `toolCompatibility.deprecated`）。
+5. **取号入口询问**：用户只是问“怎么取号”“取号入口”“现在取号要排多久”时，先用 MCP `get_queue_info` 查询公开状态或入口说明（返回 `取号说明.门店取号口径` 区分北邮店和五道口店），不要直接触发真实取号授权；只有用户明确要“帮我取号 / 帮我排个号 / 帮我取消 / 查我的排队进度”时，才转入下一类。
+6. **真实动作**：用户明确要“帮我取号”“查我的排队进度”“取消排队”，才调用内嵌 `meituan-queue`。
 
 用户问“这会取号要排多久”“现在过去要等多久”时，不要编具体等待分钟。当前 MCP 只能提供等待桌数、排队状态、餐段事实和参考建议；回答时说清“平台没有返回可靠等待分钟”，再给当前等待桌数、排队压力和取号建议。
 
-`get_queue_info` 的入参保持稳定：`shop`、`peopleCount`、`visitTime`。当传入 `visitTime` 时，`历史参考.参考[]` 里可能包含 `同刻快照`，其中 `各桌型` 是昨天或上周同一时刻附近最近采样的分桌型等待桌数。用户问“当前 vs 昨天同一时间”“每个桌型差多少”时，应把 `当前排队状态.门店[].各桌型` 与 `历史参考.参考[].同刻快照.各桌型` 按 `tableTypeId` 或桌型名对齐后比较；不要只拿 `预估等待桌数` 或总等待桌数回答。若 `同刻快照` 为空，再说明该时刻暂无足够历史快照。
+**已排号后问多久**：用户已经排上号并给出“前面还有 3 桌”这类个人队列信息时，**不要用门店当前总等待桌数冒充个人进度**。MCP `get_queue_info` 不查个人订单；内嵌 `meituan-queue` 的 `order_detail` 才返回本人排队号和前方等待桌数。回答时说清“每桌用餐时间不太一样，不好估准时间”，引导用户回小程序看个人进度。
+
+`get_queue_info` 的入参保持稳定：`shop`、`peopleCount`、`partySize`、`tableType`、`questionType`、`visitTime`。当传入 `visitTime` 时，`历史参考.参考[]` 里可能包含 `同刻快照`，其中 `各桌型` 是昨天或上周同一时刻附近最近采样的分桌型等待桌数。用户问“当前 vs 昨天同一时间”“每个桌型差多少”时，应把 `当前排队状态.门店[].各桌型` 与 `历史参考.参考[].同刻快照.各桌型` 按 `tableTypeId` 或桌型名对齐后比较；不要只拿 `预估等待桌数` 或总等待桌数回答。若 `同刻快照` 为空，再说明该时刻暂无足够历史快照。计划到店历史参考优先读 `历史参考.selectedReference`（上周同日优先于前一天）。
 
 ## 盲区应对
 
@@ -179,8 +199,8 @@ keywords:
 
 ## 使用示例
 
-**综合查询**：用户问"金谷园是个什么样的地方？" → 调用 `get_restaurant_info`
-> 金谷园饺子馆，北邮旁边的饺子馆。营业时间 10:00-22:00，目前有两家店——北邮店在杏坛路文教产业园K座南2层，五道口店在五道口东源大厦4层。
+**综合查询**：用户问"金谷园是什么样的店？" → 同时调用 `get_restaurant_info`＋`get_delivery_info`＋`get_wifi_info`，合并回复
+> 金谷园饺子馆，北邮旁边的饺子馆。营业时间 10:00-22:00，目前有两家店——北邮店在杏坛路文教产业园K座南2层，五道口店在五道口东源大厦4层。店内Wi-Fi：苹果密码8个8。外卖的话在美团外卖上搜"金谷园饺子馆"，3公里内能送。
 
 **具体查询**：用户问"能打包生饺子带走吗？" → 调用 `get_raw_dumpling_info`
 > 可以的，非特殊节气，直接到店下单就行，5-10分钟包好。带走后1小时内煮最好，来不及就放冰箱冷冻。煮的时候水烧开下饺子，中间点两次凉水，浮起来就熟了。

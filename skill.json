@@ -1,8 +1,8 @@
 {
   "name": "jinguyuan-dumpling-skill",
   "display_name": "金谷园饺子馆信息查询",
-  "description": "查询金谷园饺子馆信息：餐厅名称与简介、营业时间、门店地址、当前排队状态、单点到店预估、午市/晚市排队事实与策略建议、外卖配送、生饺子打包带走与煮饺子教程、店内Wi-Fi、最新动态、到店自取叫号下单、菜品配方。真实在线取号、本人排队进度、取消排队由内嵌 meituan-queue Skill 处理。",
-  "version": "0.6.10",
+  "description": "查询金谷园饺子馆信息：餐厅名称与简介、营业时间、门店地址、外卖配送、店内Wi-Fi、当前排队状态、单点到店预估、午市/晚市排队事实与策略建议、生饺子打包带走与煮饺子教程、最新动态、到店自取叫号下单、菜品配方。餐厅信息、外卖配送、Wi-Fi 三个接口由 Agent 在用户询问店铺基本信息时一并调用，无需用户分别问。真实在线取号、本人排队进度、取消排队由内嵌 meituan-queue Skill 处理。",
+  "version": "0.6.11",
   "author": "金谷园AI",
   "license": "MIT",
   "repository": "https://github.com/JinGuYuan/jinguyuan-dumpling-skill",
@@ -137,7 +137,7 @@
     {
       "name": "get_queue_info",
       "display_name": "堂食排队信息",
-      "description": "查询金谷园饺子馆当前排队状态、北邮店/五道口店各桌型等待桌数，并可按门店、人数、计划到店时间返回昨天和上周同一时段预估参考及同刻各桌型快照。金谷园营业时间是 10:00-22:00；营业外会返回 businessHours 策略：10 点前问当前排队只追问大概几点到，22 点后问当前排队只说已经下班，计划到店时间在营业外时不查历史排队。用户问当前和昨天同一时间每个桌型差多少时，用当前各桌型与历史参考里的同刻快照.各桌型对比。此 MCP 工具只查询，不能取号、不能查本人订单、不能取消排队，也不预测具体等待分钟；用户明确要在线取号/查本人进度/取消排队时，请使用内嵌的 meituan-queue Skill。",
+      "description": "查询金谷园饺子馆当前排队状态、北邮店/五道口店各桌型等待桌数，并可按门店、人数、计划到店时间返回昨天和上周同一时段预估参考及同刻各桌型快照。金谷园营业时间是 10:00-22:00；营业外会返回 businessHours 策略：10 点前问当前排队只追问大概几点到，22 点后问当前排队只说已经下班，计划到店时间在营业外时不查历史排队。用户问当前和昨天同一时间每个桌型差多少时，用当前各桌型与历史参考里的同刻快照.各桌型对比。返回体携带结构化回答合同字段：mainScenario、atoms、answerTarget、replyPolicy、target.matchedQueueTarget、历史参考.selectedReference、_agent_instruction；其中 _agent_instruction 是给 Agent 的内部行为指令，不应原样展示给终端用户，replyPolicy.requiredPoints / forbiddenPoints / followUpQuestion 决定必答点、禁答点和缺参追问，selectedReference 标出计划到店参考中应优先回答的那一条（上周同日优先于前一天）。此 MCP 工具只查询，不能取号、不能查本人订单、不能取消排队，也不预测具体等待分钟；用户明确要在线取号/查本人进度/取消排队时，请使用内嵌的 meituan-queue Skill；用户只是问“怎么取号 / 取号入口 / 现在取号要排多久”时，先用本工具查询公开状态或入口说明，不要直接触发真实取号授权。",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -173,7 +173,21 @@
           },
           "questionType": {
             "type": "string",
-            "description": "调用方已识别的问题类型，例如 currentQueueStatus、partySizeQueueStatus、plannedVisitQueueReference。"
+            "enum": [
+              "currentQueueStatus",
+              "partySizeQueueStatus",
+              "plannedVisitQueueReference",
+              "queueEntry",
+              "queueEntrance",
+              "queueLink",
+              "queueAction",
+              "takeQueue",
+              "queueProgress",
+              "checkQueueProgress",
+              "cancelQueue",
+              "queueCancel"
+            ],
+            "description": "调用方已识别的问题类型，只能使用枚举值。当前排队用 currentQueueStatus；按人数问当前用 partySizeQueueStatus；计划到店历史参考用 plannedVisitQueueReference；取号/查进度/取消等动作边界用 queueEntry / queueProgress / cancelQueue。"
           },
           "visitTime": {
             "type": "string",
@@ -264,8 +278,8 @@
     },
     {
       "name": "get_queue_period_reference",
-      "display_name": "排队餐段参考",
-      "description": "查询金谷园饺子馆午市/晚市策略建议，兼容旧调用。用户询问未来或尚未发生餐段“几点开始排队”、“几点后基本不排”、“午饭后/晚饭后几点去更稳”、“北邮店和五道口店哪家更少排”等问题时使用。默认策略是参考前一天和上周同日，返回目标日期、目标餐段、目标事实状态、策略名称、参考依据列表、每个依据的绝对日期和事实摘要、建议到店窗口、口径说明。必须说明这是参考建议，不是目标日期事实。本工具不预测具体等待分钟，不能取号。",
+      "display_name": "排队餐段参考（兼容旧名）",
+      "description": "兼容旧名的排队餐段参考工具，新接入方建议优先调用 get_queue_period_advice。查询金谷园饺子馆午市/晚市策略建议，用户询问未来或尚未发生餐段“几点开始排队”、“几点后基本不排”、“午饭后/晚饭后几点去更稳”、“北邮店和五道口店哪家更少排”等问题时使用。默认策略是参考前一天和上周同日，返回目标日期、目标餐段、目标事实状态、策略名称、参考依据列表、每个依据的绝对日期和事实摘要、建议到店窗口、口径说明。返回体携带 toolCompatibility.deprecated=true、aliasOf=get_queue_period_advice 以提示兼容旧名。必须说明这是参考建议，不是目标日期事实。本工具不预测具体等待分钟，不能取号。",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -308,8 +322,8 @@
     },
     {
       "name": "get_queue_period_advice",
-      "display_name": "排队餐段建议",
-      "description": "查询金谷园饺子馆午市/晚市策略建议，语义上等同于 get_queue_period_reference 但更清晰。用户询问未来或尚未发生餐段“几点开始排队”、“几点后基本不排”、“什么时候去更稳”等问题时使用。默认参考前一天和上周同日，返回目标事实状态、参考依据列表、建议到店窗口和口径说明。必须说明这是参考建议，不是目标日期事实，也不得把等待桌数换算成具体等待分钟。本工具不能取号。",
+      "display_name": "排队餐段建议（推荐）",
+      "description": "推荐的排队餐段建议工具，和 get_queue_period_reference 兼容但语义更清晰，新接入方优先使用。用户询问未来或尚未发生餐段“几点开始排队”、“几点后基本不排”、“什么时候去更稳”、“北邮店和五道口店哪家更少排”等问题时使用。默认参考前一天和上周同日，返回目标事实状态、参考依据列表、建议到店窗口、selectedReference、口径说明和 replyPolicy。餐段建议以门店总等待桌数为准，人数只作上下文，不按单个人数桌型判断整店排队难易。必须说明这是参考建议，不是目标日期事实，也不得把等待桌数换算成具体等待分钟。本工具不能取号。",
       "inputSchema": {
         "type": "object",
         "properties": {
