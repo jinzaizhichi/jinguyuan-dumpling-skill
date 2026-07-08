@@ -12,3 +12,6 @@ __pycache__/
 # clawhub install 本地副产物
 .clawhub/
 skills/
+
+# 工作内部分档（TODO、session 记录等，不公开）
+docs/
