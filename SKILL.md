@@ -67,9 +67,6 @@ keywords:
 >
 > 其他工具调用方式相同，只需替换 `params.name` 为对应工具名。完整工具列表**必须通过 `tools/list` 方法动态获取**（`skill.json` 的 `tools` 字段仅为平台索引快照，可能不完整）。
 >
-> **降级策略**：MCP 调用失败或超时时，可使用本文档静态数据回复。
-> 优先级：MCP 实时数据 > 本文档静态数据 > 告知用户稍后重试。
->
 > **排队餐段口径**：
 > - `get_queue_period_facts` 是事实层。用户问已经发生的某天午市/晚市“几点开始排”“几点后不排”“最高排多少桌”时，必须优先调用它，并明确说这是目标日期实际观测。
 > - `get_queue_period_advice` 是策略层推荐路径；`get_queue_period_reference` 是兼容旧名（返回体携带 `toolCompatibility.deprecated=true, aliasOf=get_queue_period_advice`），新接入方优先用 `get_queue_period_advice`。用户问未来或尚未发生餐段“几点开始排”“什么时候去更稳”时调用，并明确说这是参考建议，不是目标日期事实。
