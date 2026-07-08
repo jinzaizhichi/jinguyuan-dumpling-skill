@@ -6,6 +6,25 @@
 
 ## 已完成
 
+### 2026-07-08：MCP 三接口合并 `get_restaurant_info` / `get_delivery_info` / `get_wifi_info` → `get_shop_basics`
+
+**背景**：SKILL.md 已要求 Agent 在用户问店铺基本信息时一并调用这三个工具，合并为单一工具可减少一次对话中多次 MCP 调用。
+
+**变更**：
+- MCP 侧（`jgy-mcp/src/index.js`）：删除三个旧工具注册，新增 `get_shop_basics` 工具，一次返回 `restaurant`（餐厅信息）+ `delivery`（外卖）+ `wifi` 三份数据。
+- MCP golden test（`test-mcp-golden.mjs`）：新增 `get_shop_basics` 断言，确认旧工具已被移除。
+- MCP smoke test（`smoke.sh`）：替换旧工具名引用，更新工具计数从 10 到 11。
+- MCP JSON-only test（`test-json-only.mjs`）：替换旧工具名引用。
+- MCP README：工具表更新为 `get_shop_basics`。
+- `skill.json`：`tools` 数组把三个旧名替换为 `get_shop_basics`。
+- `SKILL.md`：更新 frontmatter 描述、"使用示例"综合查询示例、MCP 调用示例。
+- GET 兜底路由：`/restaurant-info` / `/delivery-info` / `/wifi-info` 替换为 `/shop-basics`。
+
+**影响范围**：
+- breaking change：已安装旧版 Skill 调用旧工具名会失败。
+- 需部署 MCP 后再发新版 Skill。
+- 需提高 `service_config` 中 `skill_update.latest_version` 到新版 Skill 版本。
+
 ### 2026-07-08：删除 `brand_prompt` 字段
 
 **背景**：`skill.json` 中的 `brand_prompt`（含 `system_instruction`、`tone`、`brand_keywords`）属于可能过时的静态描述。品牌调性、语气约束、排队路由规则等指令已沉淀在 [SKILL.md](../SKILL.md) 的"品牌调性与语气"和"排队路由"章节，由 Agent 读取 SKILL.md 时生效；`skill.json` 里再放一份属于冗余，且存在两处不一致的风险。
@@ -23,30 +42,9 @@
 
 ## 待办
 
-### 1. MCP 侧合并 `get_restaurant_info` / `get_delivery_info` / `get_wifi_info`
+### 1. ~~MCP 侧合并 `get_restaurant_info` / `get_delivery_info` / `get_wifi_info`~~ 已完成
 
-**现状**：MCP Server（`/Users/libo/Projects/金谷园AI/jgy-mcp`）当前暴露三个独立工具：
-- `get_restaurant_info` — 餐厅基本信息（名称、简介、营业时间、地址）
-- `get_delivery_info` — 外卖配送信息
-- `get_wifi_info` — 店内 Wi-Fi 密码
-
-三者数据来源都是硬编码（见 [design-decisions.md §2](../../jgy-mcp/docs/design-decisions.md)），且 SKILL.md 已要求 Agent 在用户问店铺基本信息时**一并调用**这三个工具合并回复（见 [SKILL.md "使用示例"综合查询](../SKILL.md)）。
-
-**计划**：合并为单一工具（暂定名 `get_shop_basics` 或类似），一次调用返回餐厅信息 + 外卖 + Wi-Fi。
-
-**为什么是 breaking change**：
-- MCP `tools/list` 会少两个工具名。
-- `skill.json` 的 `tools` 索引需同步删除旧名、加入新名。
-- `SKILL.md` 中所有引用旧工具名的地方（"使用示例"、"排队路由"以外的基础查询说明）都要改。
-- 已安装旧版 Skill 的 Agent 在 MCP 升级后调用旧工具名会失败，需配合提高 `service_config` 中 `skill_update.latest_version` 强制升级（见 [design-decisions.md §10](../../jgy-mcp/docs/design-decisions.md)）。
-
-**收尾清单**（合并时按顺序做）：
-1. MCP 侧（`jgy-mcp/src/index.js`）：实现合并工具，保留旧工具名做兼容期或直接删除。
-2. MCP golden test（`jgy-mcp/scripts/test-mcp-golden.mjs`）：更新 `tools/list` 断言和调用断言。
-3. `skill.json`：更新 `tools` 数组。
-4. `SKILL.md`：更新"使用示例"和所有引用旧工具名的段落。
-5. `service_config`：提高 `skill_update.latest_version` 到新版 Skill 版本。
-6. MCP 侧 README 工具表同步更新。
+详见上方已完成记录。
 
 ### 2. 缺少 Skill 侧 golden test / 集成测试
 

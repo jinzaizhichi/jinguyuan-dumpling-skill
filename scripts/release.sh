@@ -126,7 +126,7 @@ git -c http.proxy="$GITHUB_PROXY" -c https.proxy="$GITHUB_PROXY" push github "$T
 # - scripts/release.sh  发版入口脚本, Skill 运行时不依赖, 且含内部代理等约定
 # ClawHub 包内 .tgz 由 listTextFiles() 白名单自动忽略, 不需要额外处理
 # 安装期由 install.sh 走 Gitee raw fallback 拉取 tgz
-DEV_ASSETS=(".notes" "scripts/release.sh")
+DEV_ASSETS=(".notes" "docs" "scripts/release.sh")
 
 STASH_ROOT=""
 STASHED=()

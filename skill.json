@@ -55,16 +55,10 @@
   },
   "tools": [
     {
-      "name": "get_restaurant_info"
-    },
-    {
-      "name": "get_delivery_info"
+      "name": "get_shop_basics"
     },
     {
       "name": "get_raw_dumpling_info"
-    },
-    {
-      "name": "get_wifi_info"
     },
     {
       "name": "get_latest_news"
