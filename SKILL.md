@@ -112,28 +112,6 @@ keywords:
    - "帮我来份饺子到店自取"
 3. 说明技能会实时调用 MCP 服务获取最新数据，信息准确可靠
 
-## 触发场景
-
-> ⚠️ 以下为常见触发场景示例，**不是完整功能列表**。MCP 服务端工具会持续更新，回答「有什么功能」类问题时，**必须先通过 `tools/list` 获取实时完整工具列表**，不要依赖本表格或 `skill.json` 中的静态列表。
-
-| 用户可能会问 | 调用什么 |
-|---|---|
-| "金谷园在哪？" / "营业时间？" / "介绍一下金谷园" / "能送外卖吗？" / "Wi-Fi 密码？" | `get_restaurant_info`＋`get_delivery_info`＋`get_wifi_info`（三个接口并行调用，一次性回复店铺基本信息、外卖渠道和Wi-Fi密码） |
-| "能打包吗？" / "生饺子怎么煮？" | `get_raw_dumpling_info` |
-| "最近有什么活动？" | `get_latest_news` |
-| "金谷园有什么好吃的？" / "金谷园招牌菜" / "推荐几个金谷园的菜" / "金谷园新品" / "金谷园必点" | `get_recommended_dishes`（返回结果内嵌到店自取链接与 _agent_instruction，直接渲染，无需再调 `get_pickup_link`） |
-| "帮我来份饺子" / "提前点餐到店取" / "到店自取" / "叫号取餐" / "外带" / "外带自提" / "自提" | `get_pickup_link` |
-| "今天晚上排队吗？" / "今晚排队吗？" / "明天中午排队吗？"（没说具体几点到） | `ask_queue_visit_time`（只追问“你想大概几点到？”，不要查当前排队，不要默认 12:00 或 18:00） |
-| "现在排队吗？" / "门店排队状态" / "北邮店现在几桌？" / "今晚 6 点会不会排队？" | `get_queue_info`（可传 `shop`、`peopleCount`、`visitTime`） |
-| "现在和昨天这个点各桌型差多少？" / "昨天同一时间小桌几桌？" | `get_queue_info`（传 `shop`、`visitTime`；用返回的当前 `各桌型` 和历史 `同刻快照.各桌型` 对比） |
-| "今天中午几点开始排？" / "昨天晚上几点后不排？" / "7 月 1 日午市最高排多少桌？" | `get_queue_period_facts`（已发生日期/餐段的实际观测） |
-| "明天中午几点开始排？" / "午饭后几点不排？" / "晚上几点去比较稳？" / "北邮店和五道口店哪家排得少？" | `get_queue_period_advice`（推荐）或 `get_queue_period_reference`（兼容旧名，返回等价）；两者都返回 `selectedReference` 和 `replyPolicy` |
-| "这会取号要排多久？" / "现在过去要等多久？" | 先调 `get_queue_info` 查当前等待桌数和排队压力；不得编具体等待分钟 |
-| "怎么排队？" / "怎么取号？" / "等位怎么弄？" | 先调 `get_queue_info` 说明当前状态与取号渠道；用户明确要代取号时再转内嵌 Skill |
-| "帮我排个队" / "帮我取号" / "排个号" | 内嵌 Skill：`meituan-queue` → `take_number` |
-| "排队进度" / "前面还有几桌" / "查排队" / "查询排队订单" | 内嵌 Skill：`meituan-queue` → `order_detail` |
-| "取消排队" | 内嵌 Skill：`meituan-queue` → `order_cancel` |
-
 ## 内嵌 Skill：美团排队取号
 
 本 Skill 内嵌了 `meituan-queue` 排队取号能力，位于 `<skill_dir>/references/meituan-queue/`。
@@ -155,24 +133,26 @@ keywords:
 
 **注意**：排队操作为真实业务行为，取号和取消前需跟用户确认。
 
-## 排队查询边界
+## 排队路由
 
-排队相关问题分六类处理：
+| 场景 | 工具 | 约束 |
+|------|------|------|
+| 宽泛餐段没说具体时间 | `ask_queue_visit_time` | 只追问"你想大概几点到？"，不查当前，不默认 12:00/18:00 |
+| 当前/计划时间点状态 | `get_queue_info` | 优先读 `mainScenario`/`answerTarget`/`replyPolicy`/`matchedQueueTarget`/`selectedReference`；用户主动给人数/桌型时按匹配结果回答，不用总等待替代 |
+| 已发生餐段事实 | `get_queue_period_facts` | 明确是实际观测 |
+| 未来餐段建议 | `get_queue_period_advice`（推荐）或 `get_queue_period_reference`（兼容旧名） | 说明是参考建议，不是事实 |
+| 取号入口咨询 | `get_queue_info` | 读 `取号说明.门店取号口径`，不触发 meituan-queue 授权 |
+| 真实取号/查进度/取消 | 内嵌 `meituan-queue` | 走 index → take_number / order_detail / order_cancel |
 
-1. **宽泛未来餐段缺时间**：用户问“今天晚上排队吗”“今晚排队吗”“明天中午排队吗”等，但没有具体几点到，调用 MCP `ask_queue_visit_time`，只追问“你想大概几点到？”。不要调用 `get_queue_info`，不要查询当前排队，不要默认 12:00 或 18:00。
-2. **当前状态 / 单点时间**：用户问“现在排队吗”“今晚 6 点会不会排”，调用 MCP `get_queue_info`。
-   - 金谷园营业时间是 10:00-22:00。MCP 会在营业外返回 `businessHours` 策略：10 点前问当前排队，只追问“你想大概几点到？”；22 点后问当前排队，只说已经下班；计划到店时间在营业外时，不查历史排队，只说明该时间还没开门或已经下班。
-   - 调用 `get_queue_info` 时应优先读 `mainScenario`、`answerTarget`、`replyPolicy`、`matchedQueueTarget`、`selectedReference` 等结构化字段；用户主动给出人数或桌型时，按 `matchedQueueTarget.shops[].matchedTables` 回答对应桌型等待桌数，不要直接用整店总等待替代，除非无法匹配。
-3. **已发生餐段事实**：用户问已经发生的某天午市/晚市“几点开始排”“几点后不排”“最高排多少桌”，调用 MCP `get_queue_period_facts`。
-4. **未来餐段建议**：用户问未来或尚未发生餐段“几点开始排”“几点后不排”“午饭后去行不行”“什么时候去更稳”“哪家店更少排”，调用 MCP `get_queue_period_advice`（推荐）或 `get_queue_period_reference`（兼容旧名，返回内容等价但携带 `toolCompatibility.deprecated`）。
-5. **取号入口询问**：用户只是问“怎么取号”“取号入口”“现在取号要排多久”时，先用 MCP `get_queue_info` 查询公开状态或入口说明（返回 `取号说明.门店取号口径` 区分北邮店和五道口店），不要直接触发真实取号授权；只有用户明确要“帮我取号 / 帮我排个号 / 帮我取消 / 查我的排队进度”时，才转入下一类。
-6. **真实动作**：用户明确要“帮我取号”“查我的排队进度”“取消排队”，才调用内嵌 `meituan-queue`。
+**通用禁令**（回答任何排队问题都适用）：
+- 不要把等待桌数换算成具体分钟
+- 不要把前一天和上周同日加权、平均或取最保守值说成唯一结论（表格展示可以两条都展示）
+- 不要把历史参考说成目标日期事实
+- 不要用门店当前总等待冒充用户个人排队进度
+- 不要声称已帮用户取号、取消排队或查到个人进度
+- 五道口店不要引导成线上取号
 
-用户问“这会取号要排多久”“现在过去要等多久”时，不要编具体等待分钟。当前 MCP 只能提供等待桌数、排队状态、餐段事实和参考建议；回答时说清“平台没有返回可靠等待分钟”，再给当前等待桌数、排队压力和取号建议。
-
-**已排号后问多久**：用户已经排上号并给出“前面还有 3 桌”这类个人队列信息时，**不要用门店当前总等待桌数冒充个人进度**。MCP `get_queue_info` 不查个人订单；内嵌 `meituan-queue` 的 `order_detail` 才返回本人排队号和前方等待桌数。回答时说清“每桌用餐时间不太一样，不好估准时间”，引导用户回小程序看个人进度。
-
-`get_queue_info` 的入参保持稳定：`shop`、`peopleCount`、`partySize`、`tableType`、`questionType`、`visitTime`。当传入 `visitTime` 时，`历史参考.参考[]` 里可能包含 `同刻快照`，其中 `各桌型` 是昨天或上周同一时刻附近最近采样的分桌型等待桌数。用户问“当前 vs 昨天同一时间”“每个桌型差多少”时，应把 `当前排队状态.门店[].各桌型` 与 `历史参考.参考[].同刻快照.各桌型` 按 `tableTypeId` 或桌型名对齐后比较；不要只拿 `预估等待桌数` 或总等待桌数回答。若 `同刻快照` 为空，再说明该时刻暂无足够历史快照。计划到店历史参考优先读 `历史参考.selectedReference`（上周同日优先于前一天）。
+用户说"前面还有 3 桌"这类个人队列信息时，不走 MCP 查数，直接说明不好估准时间。`get_queue_info` 的入参：`shop`、`peopleCount`/`partySize`、`tableType`、`questionType`、`visitTime`。
 
 ## 盲区应对
 
