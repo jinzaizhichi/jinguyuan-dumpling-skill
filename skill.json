@@ -76,9 +76,6 @@
       "name": "get_queue_period_facts"
     },
     {
-      "name": "get_queue_period_reference"
-    },
-    {
       "name": "get_queue_period_advice"
     },
     {

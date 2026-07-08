@@ -69,7 +69,7 @@ keywords:
 >
 > **排队餐段口径**：
 > - `get_queue_period_facts` 是事实层。用户问已经发生的某天午市/晚市“几点开始排”“几点后不排”“最高排多少桌”时，必须优先调用它，并明确说这是目标日期实际观测。
-> - `get_queue_period_advice` 是策略层推荐路径；`get_queue_period_reference` 是兼容旧名（返回体携带 `toolCompatibility.deprecated=true, aliasOf=get_queue_period_advice`），新接入方优先用 `get_queue_period_advice`。用户问未来或尚未发生餐段“几点开始排”“什么时候去更稳”时调用，并明确说这是参考建议，不是目标日期事实。
+> - `get_queue_period_advice` 是策略层接口。用户问未来或尚未发生餐段“几点开始排”“什么时候去更稳”时调用，并明确说这是参考建议，不是目标日期事实。（旧名 `get_queue_period_reference` 已于 Skill v1.0.0 合并进本接口并下线，不再保留。）
 > - 策略层默认参考“前一天 + 上周同日”。Agent 可以组织话术，但不能把参考说成目标日期事实，也不能把等待桌数换算成具体等待分钟。
 >
 > **读取 MCP 回答合同**（v0.6.11 起对齐 MCP v44）：
@@ -137,7 +137,7 @@ keywords:
 | 宽泛餐段没说具体时间 | `ask_queue_visit_time` | 只追问"你想大概几点到？"，不查当前，不默认 12:00/18:00 |
 | 当前/计划时间点状态 | `get_queue_info` | 优先读 `mainScenario`/`answerTarget`/`replyPolicy`/`matchedQueueTarget`/`selectedReference`；用户主动给人数/桌型时按匹配结果回答，不用总等待替代 |
 | 已发生餐段事实 | `get_queue_period_facts` | 明确是实际观测 |
-| 未来餐段建议 | `get_queue_period_advice`（推荐）或 `get_queue_period_reference`（兼容旧名） | 说明是参考建议，不是事实 |
+| 未来餐段建议 | `get_queue_period_advice` | 说明是参考建议，不是事实 |
 | 取号入口咨询 | `get_queue_info` | 读 `取号说明.门店取号口径`，不触发 meituan-queue 授权 |
 | 真实取号/查进度/取消 | 内嵌 `meituan-queue` | 走 index → take_number / order_detail / order_cancel |
 
