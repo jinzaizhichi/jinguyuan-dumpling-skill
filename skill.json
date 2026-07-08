@@ -67,6 +67,9 @@
       "name": "get_queue_info"
     },
     {
+      "name": "get_queue_at_time"
+    },
+    {
       "name": "ask_queue_visit_time"
     },
     {
