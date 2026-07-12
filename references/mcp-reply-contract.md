@@ -1,0 +1,32 @@
+# MCP 排队类回答合同
+
+排队相关工具返回体带结构化字段。Agent **优先读这些字段**，不要只读中文自然语言说明。
+
+## 字段
+
+| 字段 | 含义 |
+|------|------|
+| `mainScenario` | 主场景（如 `currentQueueStatus` / `plannedVisitQueueReference` / `businessHours` / `queueActionBoundary` / `queuePeriodFacts` / `queuePeriodAdvice` / `askVisitTime`）。据此定回答骨架。 |
+| `atoms` | 语义原子（如 `partySizeTarget` / `tableTypeTarget` / `plannedVisitReference` / `beforeOpen` / `afterClose`）。 |
+| `answerTarget` | 应优先回答的数据位置，例如 `{ type: 'matchedQueueTarget', field: '…等待桌数' }` 或 `{ type: 'plannedVisitReference', field: '历史参考.selectedReference' }`。 |
+| `replyPolicy` | `requiredPoints`（必答）、`forbiddenPoints`（禁答）、`followUpQuestion`、`nextSuggestedQuestion`、`linkRequired`。 |
+| `selectedReference` | 计划到店历史参考中应优先说的那一条；**上周同日优先于前一天**。一句话建议读它；不要把前一天和上周同日加权 / 平均 / 取最保守后说成唯一结论。表格可两条都展示。 |
+| `_agent_instruction` | 给 Agent 的内部指令，**不要原样展示给用户**。 |
+
+## 餐段口径
+
+| 工具 | 含义 |
+|------|------|
+| `get_queue_period_facts` | **事实层**：已发生餐段「几点开始排 / 几点后不排 / 最高排多少桌」等，必须说清是目标日期**实际观测**。 |
+| `get_queue_period_advice` | **策略层**：未来或未发生餐段建议；说清是**参考建议**，不是目标日期事实。默认参考「前一天 + 上周同日」。 |
+
+旧名 `get_queue_period_reference` 已合并进 `get_queue_period_advice` 并下线，不再保留。
+
+## 禁止项（与 `replyPolicy.forbiddenPoints` 一致）
+
+- 不要把等待桌数换算成准确分钟。
+- 不要把前一天和上周同日加权、平均或取最保守值后说成唯一结论。
+- 不要把历史参考说成目标日期事实。
+- 不要用门店当前总等待冒充用户个人排队进度。
+- 不要声称 MCP 已帮用户取号、取消排队或查到个人进度。
+- 五道口店不要引导成线上取号。
