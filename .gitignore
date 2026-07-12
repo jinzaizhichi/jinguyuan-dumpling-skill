@@ -15,3 +15,14 @@ skills/
 
 # 工作内部分档（TODO、session 记录等，不公开）
 docs/
+
+# 2.x 维护侧残留（本仓产品线是 1.0.1；真 2.x 在 jinguyuan-dumpling-skill-v2）
+# 勿 commit：会污染公开 Skill 包，且用例断言与 1.x 嵌套 meituan-queue 形状冲突
+tests/
+scripts/package-check.js
+
+# 维护者发版脚本（仅本机；不进 Gitee/GitHub/ClawHub 公开树）
+scripts/release.sh
+
+# 本地 vendor 试验（若有）
+scripts/vendor/
