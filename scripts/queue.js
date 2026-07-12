@@ -266,7 +266,9 @@ function buildAuthUserReplyMarkdown({ authLink, qrImagePath }) {
   const lines = [];
   // Order matches V1 passport Step 3: image first, then copy.
   if (typeof qrImagePath === 'string' && qrImagePath) {
-    lines.push(`![美团授权二维码](${qrImagePath})`);
+    // Wrap path in angle brackets so Markdown parsers handle spaces in paths
+    // like ".../Application Support/TRAE SOLO CN/.../qr.png" correctly.
+    lines.push(`![美团授权二维码](<${qrImagePath}>)`);
     lines.push('');
   }
   lines.push('---');
@@ -363,7 +365,7 @@ async function beginAuthorization(deps, { force = false } = {}) {
 
   const message = [
     '需要完成美团授权。',
-    '【Agent 必做·对齐 V1】有图时：Read 绝对路径 PNG 后，把 `![美团授权二维码](绝对路径)` 写进主气泡正文（仅 Read/仅附件不算）；并原样贴 data.userReplyMarkdown（链接必现）。',
+    '【Agent 必做·对齐 V1】有图时：Read 绝对路径 PNG 后，把 `![美团授权二维码](<绝对路径>)` 写进主气泡正文（仅 Read/仅附件不算）；并原样贴 data.userReplyMarkdown（链接必现）。',
     `授权链接: ${authLink}`,
     data.qrImagePath
       ? `二维码图绝对路径: ${data.qrImagePath}` +
