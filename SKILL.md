@@ -79,7 +79,7 @@ node <skill_dir>/scripts/queue.js <command>
 **授权（`AUTH_REQUIRED`）摘要**：
 
 1. 通常已后台 `poll-token`；**禁止** `auth-poll --wait` 堵对话。
-2. PNG 在工作区 **`.jinguyuan-auth-qr.png`**（`data.qrImagePath` = **绝对路径**）。推荐原样贴 `data.userReplyMarkdown`。
+2. PNG 在工作区 **`jinguyuan-auth-qr.png`**（非隐藏文件；`data.qrImagePath` = **绝对路径**）。推荐原样贴 `data.userReplyMarkdown`。
 3. **主气泡必须**有：`![美团授权二维码](绝对路径)`（有图时）+ 可点链接与明文 URL。仅 Read / 仅附件侧栏 / 步骤卡「已展示」**不算**。
 4. 展示后短查 `auth-status`。无 `authLink` 时先 `logout` 成功再重跑。Token：`~/.jinguyuan/passport-auth.json`。
 

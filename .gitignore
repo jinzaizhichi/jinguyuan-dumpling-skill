@@ -26,5 +26,7 @@ scripts/package-check.js
 
 # local QR preview artifacts + runtime auth QR under workspace
 meituan-auth-qr*.png
+jinguyuan-auth-qr.png
+jinguyuan-auth-qr.*.tmp
 .jinguyuan-auth-qr.png
 .jinguyuan-auth-qr.*.tmp

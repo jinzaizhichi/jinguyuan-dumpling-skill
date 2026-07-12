@@ -12,9 +12,15 @@ process.env.NODE_PATH = [QR_BUNDLED, process.env.NODE_PATH].filter(Boolean).join
 Module._initPaths();
 const qrcode = require('./vendor/bundled_modules/qrcode');
 
-/** Flat file in workspace root — Agent-friendly, one path segment deep. */
-const QR_FILE_NAME = '.jinguyuan-auth-qr.png';
-const QR_FILE_PATTERN = /^\.jinguyuan-auth-qr\.png$/;
+/**
+ * Flat file in workspace root — Agent-friendly, one path segment deep.
+ * Not a dotfile: leading-dot names are hidden on macOS/Linux and many Agents
+ * skip them in list/read/image tools.
+ */
+const QR_FILE_NAME = 'jinguyuan-auth-qr.png';
+const QR_FILE_PATTERN = /^jinguyuan-auth-qr\.png$/;
+/** Pre-2.1.6 name (hidden). Unlinked on create when present. */
+const LEGACY_QR_FILE_NAME = '.jinguyuan-auth-qr.png';
 
 function isMissing(error) {
   return error.code === 'ENOENT';
@@ -22,7 +28,7 @@ function isMissing(error) {
 
 /**
  * Default directory that owns the QR file: the session workspace (cwd).
- * File itself: <workspace>/.jinguyuan-auth-qr.png
+ * File itself: <workspace>/jinguyuan-auth-qr.png
  *
  * Do NOT put PNG under ~/.jinguyuan — many Agents cannot see home.
  * (Passport token / poll-state still use ~/.jinguyuan.)
@@ -57,7 +63,7 @@ async function createAuthQr(authLink, { tmpDir, clientId: _clientId }) {
   const imagePath = path.join(root, QR_FILE_NAME);
   const stagingPath = path.join(
     root,
-    `.jinguyuan-auth-qr.${crypto.randomUUID()}.tmp`,
+    `jinguyuan-auth-qr.${crypto.randomUUID()}.tmp`,
   );
 
   try {
@@ -68,6 +74,14 @@ async function createAuthQr(authLink, { tmpDir, clientId: _clientId }) {
     });
     await fs.writeFile(stagingPath, png, { mode: 0o600 });
     await fs.rename(stagingPath, imagePath);
+    // Drop pre-2.1.6 hidden filename if still in the workspace.
+    try {
+      await fs.unlink(path.join(root, LEGACY_QR_FILE_NAME));
+    } catch (error) {
+      if (!isMissing(error)) {
+        throw error;
+      }
+    }
   } catch (error) {
     try {
       await fs.unlink(stagingPath);

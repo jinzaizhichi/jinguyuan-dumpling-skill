@@ -507,7 +507,7 @@ function authStatus(deps) {
 
 function defaultDependencies(overrides) {
   const homeDir = overrides.homeDir || os.homedir();
-  // QR PNG: flat file under session workspace (`.jinguyuan-auth-qr.png`).
+  // QR PNG: flat visible file under session workspace (`jinguyuan-auth-qr.png`).
   // Passport token/poll-state stay under homeDir; process temp on OS tmpdir.
   const workspaceDir = overrides.workspaceDir || process.cwd();
   const qrRootDir =
