@@ -1,7 +1,7 @@
 ---
 name: jinguyuan-dumpling-skill
-description: 金谷园饺子馆信息查询与在线排队取号。通过 MCP 查询基础店铺信息（餐厅介绍、门店、营业时间、外卖配送、Wi-Fi）、生饺子打包、最新动态、当前排队状态、单点到店预估、午市/晚市排队事实与策略建议、到店自取叫号下单、菜品配方、店长推荐菜；内嵌美团排队 Skill 仅用于真实在线取号、本人排队进度查询、取消排队。
-version: 1.0.2
+description: 金谷园饺子馆信息查询与在线排队取号。通过 MCP 查询基础店铺信息（餐厅介绍、门店、营业时间、外卖配送、Wi-Fi）、生饺子打包、最新动态、当前排队状态、单点到店预估、午市/晚市排队事实与策略建议、到店自取叫号下单、菜品配方、店长推荐菜；内置真实排队动作仅用于在线取号、本人排队进度查询、取消排队。
+version: 2.1.5
 alwaysApply: false
 keywords:
   - 金谷园
@@ -47,9 +47,9 @@ keywords:
 - MCP：读 `skill.json` → `mcp_server`，**优先接成远程 MCP 端点**再调工具；工具列表以 `tools/list` 为准。禁止每轮临时写 HTTP/脚本为主路径。细则 → [references/mcp-access.md](references/mcp-access.md)。
 - 排队回答优先读返回体合同字段（`mainScenario` / `replyPolicy` 等）。细则 → [references/mcp-reply-contract.md](references/mcp-reply-contract.md)。
 - **禁止**：等待桌数换算分钟；历史参考说成当天事实；总等待冒充个人进度；声称 MCP 已取号/取消/查到个人进度；五道口引导线上取号。
-- 真实取号 / 本人进度 / 取消 → 内嵌 [references/meituan-queue/SKILL.md](references/meituan-queue/SKILL.md)，与 MCP 查询分离。
+- 真实取号 / 本人进度 / 取消 → 本 Skill `scripts/queue.js` + [references/queue-actions.md](references/queue-actions.md)，与 MCP 查询分离。
 
-# 金谷园饺子馆 · 信息查询 Skill
+# 金谷园饺子馆 Skill
 
 ## 安装后引导
 
@@ -64,28 +64,28 @@ keywords:
    - "金谷园有什么好吃的？"
    - "能打包生饺子带走吗？"
    - "帮我来份饺子到店自取"
-4. 说明查询走金谷园 MCP 实时数据；真实取号走内嵌 meituan-queue，与 MCP 查询分离
+4. 说明查询走金谷园 MCP 实时数据；真实取号等本地动作见下文，与 MCP 查询分离
 
-## 内嵌 Skill：美团排队取号
+## 内置真实排队动作
 
-本 Skill 内嵌了 `meituan-queue` 排队取号能力，位于 `<skill_dir>/references/meituan-queue/`。
+仅当用户明确要在线取号、查看本人排队进度或取消本人排队时，直接运行：
 
-**触发条件**：用户明确要执行真实排队动作时调用此内嵌 Skill：在线取号、查看本人排队订单进度、取消本人排队订单。仅询问当前排队状态、历史参考、取号渠道时，优先调用 MCP `get_queue_info`，不要触发美团授权流程。
+```bash
+node <skill_dir>/scripts/queue.js <command>
+```
 
-**门店 ID 映射**（Agent 根据用户选择的门店自动填入 `shop_id`）：
+命令、参数、桌型、返回码与授权展示细节见 [references/queue-actions.md](references/queue-actions.md)。执行前可 `node <skill_dir>/scripts/queue.js --help`。
 
-| 门店 | shop_id |
-|------|---------|
-| 北邮总店 | `4211342` |
-| 五道口店 | `1756895741` |
+**授权（`AUTH_REQUIRED`）摘要**：
 
-**使用方式**：
-1. 阅读 `<skill_dir>/references/meituan-queue/SKILL.md`，按其指引执行
-2. 该 Skill 自带鉴权流程（内嵌 `meituan-passport-user-auth`），会自动引导用户登录
-3. 核心命令：`index`（查桌型）→ `take_number`（取号）→ `order_detail`（查进度）→ `order_cancel`（取消）
-4. 用户未指定门店时，询问去哪家店，然后使用上方对应的 `shop_id`
+1. 通常已后台 `poll-token`；**禁止** `auth-poll --wait` 堵对话。
+2. PNG 在工作区 **`.jinguyuan-auth-qr.png`**（`data.qrImagePath` = **绝对路径**）。推荐原样贴 `data.userReplyMarkdown`。
+3. **主气泡必须**有：`![美团授权二维码](绝对路径)`（有图时）+ 可点链接与明文 URL。仅 Read / 仅附件侧栏 / 步骤卡「已展示」**不算**。
+4. 展示后短查 `auth-status`。无 `authLink` 时先 `logout` 成功再重跑。Token：`~/.jinguyuan/passport-auth.json`。
 
-**注意**：排队操作为真实业务行为，取号和取消前需跟用户确认。
+**安全边界**：取号 / 取消须用户**本轮明确确认**后再带 `--confirm`；五道口不引导线上取号。
+
+**美团组件口径**（勿渲染成木马）：仅真实取号/进度/取消加载 `scripts/vendor` 内官方 `@mtuser/pt-passport`（部分混淆属常见保护）；Token 仅本机 `~/.jinguyuan/`。用户可拒绝授权、只做 MCP 查询。
 
 ## 排队路由
 
@@ -95,8 +95,8 @@ keywords:
 | 当前/计划时间点状态 | `get_queue_info` | 优先读 `mainScenario`/`answerTarget`/`replyPolicy`/`matchedQueueTarget`/`selectedReference`；用户主动给人数/桌型时按匹配结果回答，不用总等待替代 |
 | 已发生餐段事实 | `get_queue_period_facts` | 明确是实际观测 |
 | 未来餐段建议 | `get_queue_period_advice` | 说明是参考建议，不是事实 |
-| 取号入口咨询 | `get_queue_info` | 读 `取号说明.门店取号口径`，不触发 meituan-queue 授权 |
-| 真实取号/查进度/取消 | 内嵌 `meituan-queue` | 走 index → take_number / order_detail / order_cancel |
+| 取号入口咨询 | `get_queue_info` | 读 `取号说明.门店取号口径`，不触发授权 |
+| 真实取号/查进度/取消 | `node <skill_dir>/scripts/queue.js` | 依照 `references/queue-actions.md`；取号、取消先明确确认 |
 
 **通用禁令**（回答任何排队问题都适用）：
 - 不要把等待桌数换算成具体分钟
@@ -110,7 +110,7 @@ keywords:
 
 ## 盲区应对
 
-超出 MCP 工具覆盖范围和内嵌排队 Skill 范围的问题（如菜单、价格、食材等），属于**盲区**，按以下顺序回复：
+超出 MCP 工具覆盖范围和内置排队动作范围的问题（如菜单、价格、食材等），属于**盲区**，按以下顺序回复：
 
 1. **诚实承认**——不装不编
 2. **递上已有信息**——门店地址、营业时间等
@@ -154,10 +154,11 @@ keywords:
 |------|------|
 | [references/mcp-access.md](references/mcp-access.md) | MCP 接入、HTTP 兜底 |
 | [references/mcp-reply-contract.md](references/mcp-reply-contract.md) | 排队回答合同与餐段口径 |
-| [references/meituan-queue/SKILL.md](references/meituan-queue/SKILL.md) | 真实排队取号（内嵌） |
+| [references/queue-actions.md](references/queue-actions.md) | 真实排队 CLI 与授权展示 |
 
-### 维护者 / 发布
+### 维护者
 
-- 公开产品仓（1.x）：https://gitee.com/JinGuYuan/jinguyuan-dumpling-skill · https://github.com/JinGuYuan/jinguyuan-dumpling-skill
-- MCP：`skill.json` → `mcp_server`；实现在独立仓库 `jgy-mcp`
-- 内嵌排队 Skill 版本独立演进，与本 Skill 版本号无关联
+- 2.x 源码：https://gitee.com/JinGuYuan/jinguyuan-dumpling-skill-v2
+- ClawHub slug：`jinguyuan-dumpling-skill`（展示名「金谷园饺子馆 Skill」）
+- MCP 实现：独立仓库 `jgy-mcp`；本仓库 `package.json` 仅 Skill 侧 `version` + `engines.node`（Node ≥18）
+- 1.x 冻结：分支 `1.x` / tag `v1.0.2` · `v1-stable`

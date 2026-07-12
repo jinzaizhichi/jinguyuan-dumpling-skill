@@ -2,9 +2,15 @@
 
 ![Version](https://img.shields.io/github/v/tag/JinGuYuan/jinguyuan-dumpling-skill?label=version&color=blue&sort=semver) ![License](https://img.shields.io/badge/license-MIT-green) ![MCP](https://img.shields.io/badge/protocol-MCP-purple) ![Transport](https://img.shields.io/badge/transport-Streamable%20HTTP-orange)
 
-这是一个 AI Skill——安装后，你的 AI 助手就能查询金谷园饺子馆的信息：在哪吃、几点开门、外卖渠道、Wi-Fi 密码、这会儿排不排队、晚上几点开始排、明天午饭前几点去不用排、生饺子怎么煮。还能直接帮你在美团上排队取号。
+这是一个 AI Skill——安装后，你的 AI 助手就能帮你查金谷园在哪、几点开门、这会儿排不排队、几点去更稳，也能查推荐菜、外卖和生饺子吃法。北邮店需要时，还能帮你在线排队取号。
 
 开了快二十年的饺子馆，有了自己的AI服务。
+
+
+## 版本线说明
+
+- **当前默认（本仓库 `main`）**：Skill **2.x**（纯 Node 排队运行时，无需 npm 安装依赖）。
+- **1.x 冻结线**：请使用分支 [`1.x`](https://gitee.com/JinGuYuan/jinguyuan-dumpling-skill/tree/1.x) 或 tag [`v1.0.2`](https://gitee.com/JinGuYuan/jinguyuan-dumpling-skill/tree/v1.0.2) / [`v1-stable`](https://gitee.com/JinGuYuan/jinguyuan-dumpling-skill/tree/v1-stable)。1.x 含嵌套 meituan-queue 安装形态，**不再作为默认安装源**。
 
 ## 关于金谷园
 
@@ -33,7 +39,9 @@
 
 ## 在线排队取号
 
-本 Skill 内嵌了基于**美团排队**的取号能力，AI 助手可以直接帮你完成取号、查本人订单、取消排队等动作，无需打开美团 App。
+本 Skill 内置了基于**美团排队**的真实动作，AI 助手可以帮你取号、查本人订单和取消排队。取号和取消前，都会再跟你确认一次。
+
+> 在线取号目前用于北邮总店；五道口店不引导在线取号。
 
 **支持的操作：**
 
@@ -48,12 +56,26 @@
 
 **使用流程：**
 
-1. 告诉 AI 助手你要排队，说明门店（北邮店 / 五道口店）
+1. 告诉 AI 助手你要在北邮店排队
 2. AI 查询可选桌型，跟你确认桌型和人数
 3. 确认后自动取号，返回排队号和等待信息
 4. 随时可查进度或取消
 
-首次使用需完成美团账号授权（AI 助手会引导你完成），同一会话内无需重复登录。
+首次使用需完成美团账号授权（AI 助手会引导你完成）。授权在本机保存，跨会话或重装 Skill 后也可继续使用；Token 不会展示给你。
+
+### 关于美团授权组件（说明一下）
+
+只查店、查排队状态时，走金谷园自己的 MCP，**不会**加载美团登录组件。
+
+只有你要 **真实取号 / 查本人排队进度 / 取消排队** 时，本机才会运行 Skill 里随包附带的美团官方用户授权工具（`@mtuser/pt-passport`，以及它依赖的 `@sec/cliguard`）。这是美团侧为 **Passport 登录、接口请求签名与风控（含设备侧校验）** 提供的正式组件，不是金谷园自写的「来路不明脚本」。
+
+你可能会在文件里看到代码被 **混淆（压缩成难读的形式）**：这是美团对这类安全相关客户端的常见做法，用来保护签名与风控实现，**不代表 Skill 被植入了第三方木马**。金谷园自己的排队编排代码（如 `scripts/queue.js`）仍是明文，可直接阅读。
+
+授权产生的登录凭证只保存在你本机用户目录（`~/.jinguyuan/`），不会打进 Git 仓库，也不会发给金谷园 MCP。若只想用查询、不想走美团授权，不发起取号即可。
+
+## 运行环境
+
+这是一个单 Skill，支持 Windows、macOS 和 Linux。真实排队动作需要 Node.js 18 或更高版本，无需 npm 安装。
 
 ## 安装
 
@@ -71,8 +93,6 @@ Agent 会自动克隆仓库并安装到对应的 Skill 目录。
 ## 版本
 
 版本号见顶部徽章，以 [`skill.json`](./skill.json) 为准。
-
-> 说明：本 Skill 版本与内嵌排队组件（meituan-queue）版本独立演进，互不影响。
 
 ## License
 
