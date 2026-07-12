@@ -12,10 +12,13 @@ node <skill_dir>/scripts/queue.js index <shopId>
 node <skill_dir>/scripts/queue.js take-number <shopId> --people-count <N> --table-type-id <ID> --confirm
 node <skill_dir>/scripts/queue.js order-detail <shopId>
 node <skill_dir>/scripts/queue.js order-cancel <shopId> --confirm
+node <skill_dir>/scripts/queue.js auth-start
 node <skill_dir>/scripts/queue.js auth-status
 node <skill_dir>/scripts/queue.js auth-poll --background [--qr-image-path <path>]
 node <skill_dir>/scripts/queue.js logout
 ```
+
+**发起授权用 `auth-start`**：一条命令拿到授权链接 + 二维码 + 后台轮询，与业务命令触发的授权流程完全一致。**不要**单独跑 `auth-poll --background` 来发起授权——它只启动后台监听，不生成链接和二维码。
 
 Agent 对话中**不要**使用阻塞式 `auth-poll` / `auth-poll --wait`（会长时间占住 Terminal，用户看不到授权链接与二维码）。`AUTH_REQUIRED` 时后台通常已在轮询，展示后用 **`auth-status`** 短查即可。
 
@@ -70,7 +73,7 @@ Token：`~/.jinguyuan/passport-auth.json`（与二维码目录分离）。不展
 | `AUTH_REQUIRED` | 主气泡展示链接/图；后台通常已在等；之后用 `auth-status` |
 | `AUTH_POLL_STARTED` | 后台轮询已启动；继续展示（若未展示）并用 `auth-status` |
 | `AUTH_PENDING` / `AUTH_SUCCESS` | `auth-status` 结果：pending 则稍后重查；success 按业务续跑 |
-| `AUTH_STATUS_NONE` | 无后台记录；重触发授权或 `auth-poll --background` |
+| `AUTH_STATUS_NONE` | 无后台记录；用 `auth-start` 重新触发授权 |
 | `AUTH_CANCELLED` / `AUTH_RISK_DENIED` / `AUTH_TIMEOUT` | 终止授权，说明原因；不执行原业务命令 |
 | `QUEUE_ORDER_EXISTS` | 说明已有订单，可先查本人进度；不重复取号 |
 | `QUEUE_ORDER_NOT_FOUND` | 说明当前没有本人排队订单 |

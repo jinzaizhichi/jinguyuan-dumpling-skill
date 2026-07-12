@@ -65,6 +65,7 @@ keywords:
    - "能打包生饺子带走吗？"
    - "帮我来份饺子到店自取"
 4. 说明查询走金谷园 MCP 实时数据；真实取号等本地动作见下文，与 MCP 查询分离
+5. **预授权（可选）**：若用户想提前完成美团授权，运行 `node <skill_dir>/scripts/queue.js auth-start`，一次拿到授权链接 + 二维码 + 后台轮询。不要单独跑 `auth-poll --background`——它只启动后台监听，不生成链接和二维码。
 
 ## 内置真实排队动作
 
@@ -78,7 +79,7 @@ node <skill_dir>/scripts/queue.js <command>
 
 **授权（`AUTH_REQUIRED`）摘要**：
 
-1. 通常已后台 `poll-token`；**禁止** `auth-poll --wait` 堵对话。
+1. **主动预授权**用 `auth-start`（一条命令拿到链接 + 二维码 + 后台轮询）。业务命令（`index` / `take-number` 等）发现没 Token 时也会自动走同一流程。**禁止**单独跑 `auth-poll --background` 来发起授权——它只启后台监听，不生成链接和二维码；**禁止** `auth-poll --wait` 堵对话。
 2. PNG 在工作区 **`jinguyuan-auth-qr.png`**（非隐藏文件；`data.qrImagePath` = **绝对路径**）。推荐原样贴 `data.userReplyMarkdown`。
 3. **主气泡必须**有：`![美团授权二维码](绝对路径)`（有图时）+ 可点链接与明文 URL。仅 Read / 仅附件侧栏 / 步骤卡「已展示」**不算**。
 4. 展示后短查 `auth-status`。无 `authLink` 时先 `logout` 成功再重跑。Token：`~/.jinguyuan/passport-auth.json`。

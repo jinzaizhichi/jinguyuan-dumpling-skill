@@ -4,6 +4,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { spawn } = require('node:child_process');
 
+const { PASSPORT_BUNDLED } = require('../passport');
+
 const STATE_BASENAME = 'auth-poll-state.json';
 
 function statePath(homeDir) {
@@ -84,10 +86,26 @@ function startBackgroundPoll({
     args.push('--qr-image-path', qrImagePath);
   }
 
+  // Worker re-spawns the pt-passport CLI, which requires @sec/cliguard from
+  // PASSPORT_BUNDLED via NODE_PATH. Seed it explicitly so the detached worker
+  // never fails to resolve the bundled module even if process.env.NODE_PATH
+  // was cleared or rewritten (e.g. by auth-qr.js's Module._initPaths()).
+  const existingNodePath = typeof env.NODE_PATH === 'string' ? env.NODE_PATH : '';
+  const nodePathParts = existingNodePath
+    ? existingNodePath.split(path.delimiter)
+    : [];
+  if (!nodePathParts.includes(PASSPORT_BUNDLED)) {
+    nodePathParts.unshift(PASSPORT_BUNDLED);
+  }
+  const workerEnv = {
+    ...env,
+    NODE_PATH: nodePathParts.join(path.delimiter),
+  };
+
   const child = spawnImpl(execPath, args, {
     detached: true,
     stdio: 'ignore',
-    env: { ...env },
+    env: workerEnv,
     windowsHide: true,
   });
 

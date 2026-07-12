@@ -27,6 +27,7 @@ const HELP_COMMANDS = [
   'take-number <shopId> --people-count N --table-type-id ID --confirm',
   'order-detail <shopId>',
   'order-cancel <shopId> --confirm',
+  'auth-start',
   'auth-poll [--background|--wait] [--qr-image-path <path>]',
   'auth-status',
   'logout',
@@ -66,6 +67,13 @@ function parseArguments(argv) {
   }
 
   if (command === 'auth-status') {
+    return argv.length === 1 ? { command } : null;
+  }
+
+  // One-shot authorization entry: fetch authLink + render QR + start background poll.
+  // Avoids the footgun where agents run `auth-poll --background` alone (which only
+  // starts a worker and never produces a link or QR).
+  if (command === 'auth-start') {
     return argv.length === 1 ? { command } : null;
   }
 
@@ -557,6 +565,15 @@ async function run(argv, overrides = {}) {
   }
 
   if (parsed.command === 'auth-status') return authStatus(deps);
+
+  if (parsed.command === 'auth-start') {
+    // Reuse the same beginAuthorization path business commands use, so the
+    // agent has a single self-contained authorization entry that produces
+    // authLink + QR + background poll in one shot.
+    const authorization = await beginAuthorization(deps);
+    if (authorization.result) return authorization.result;
+    return success('AUTH_SUCCESS', '已授权，可直接执行排队命令。');
+  }
 
   if (parsed.command === 'auth-poll-worker') {
     return runAuthPollWorker(parsed, deps);

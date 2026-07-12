@@ -172,4 +172,4 @@ function createPassport({ run = defaultRun, homeDir = os.homedir(), tmpDir = os.
   };
 }
 
-module.exports = { createPassport };
+module.exports = { createPassport, PASSPORT_BUNDLED };
