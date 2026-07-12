@@ -46,9 +46,16 @@ keywords:
 > 本文档中所有示例数据（营业时间、门店地址等）**仅作格式参考**，不代表实时数据。
 > 回答用户问题时，**必须调用 MCP 工具获取实时数据**，不得直接使用文档中的示例值。
 >
-> **MCP 调用方式**：通过 MCP 协议（JSON-RPC 2.0 POST）调用。端点地址见 `skill.json` 中 `mcp_server.url` 字段。
+> **MCP 接入与调用**（**优先接成端点**；禁止为每次查询临时写 HTTP/脚本）：
 >
-> **调用示例**（以 `get_shop_basics` 为例）：
+> 1. **读配置**：本 Skill 的 `skill.json` → `mcp_server`：
+>    - `url`：远程端点（当前为 `https://mcp.jinguyuan.cloud`，以文件为准）
+>    - `transport`：`streamable-http`
+> 2. **主路径 — 接入 MCP Server**：若宿主支持「添加/连接 MCP 服务器」（或已按 Skill 声明自动挂载），将金谷园 MCP **登记为远程 MCP 端点并保持会话内可用**。之后用宿主自带的 MCP 工具通道调用（`tools/list` / `tools/call` 的等价能力）。**不要**每次现写 `curl`、临时 `.js`/`.py` 去拼 JSON-RPC。
+> 3. **调工具**：用户问店/排队/生饺/动态等 → 直接 call 工具名（如 `get_shop_basics`）。完整列表以 **`tools/list`** 为准；`skill.json` 的 `tools` 只是平台索引快照，可能不完整。
+> 4. **兜底 — 仅当宿主没有 MCP 客户端**：才允许对 `mcp_server.url` 发 JSON-RPC 2.0 POST。仍应固定同一端点、复用连接/会话；**禁止**为每一轮问答新建一次性脚本文件。
+>
+> **HTTP 兜底示例**（仅路径 4；能走路径 2 时不要用）：
 >
 > ```
 > POST <skill.json 中 mcp_server.url>
@@ -65,7 +72,7 @@ keywords:
 > }
 > ```
 >
-> 其他工具调用方式相同，只需替换 `params.name` 为对应工具名。完整工具列表**必须通过 `tools/list` 方法动态获取**（`skill.json` 的 `tools` 字段仅为平台索引快照，可能不完整）。
+> 其他工具：改 `params.name` / `arguments`；需要时先 `method: "tools/list"`。
 >
 > **排队餐段口径**：
 > - `get_queue_period_facts` 是事实层。用户问已经发生的某天午市/晚市“几点开始排”“几点后不排”“最高排多少桌”时，必须优先调用它，并明确说这是目标日期实际观测。
@@ -97,8 +104,9 @@ keywords:
 ## 安装后引导
 
 当用户刚安装此技能时，Agent 应主动：
-1. 告知用户可以直接问金谷园相关问题，比如地址、营业时间、排队方式、推荐菜等
-2. 给出几个推荐的首次提问，例如：
+1. **确保金谷园 MCP 已接入**：读 `skill.json` 的 `mcp_server`，能配远程 MCP 端点则配上并保持可用；不要默认改用手写 HTTP
+2. 告知用户可以直接问金谷园相关问题，比如地址、营业时间、排队方式、推荐菜等
+3. 给出几个推荐的首次提问，例如：
    - "金谷园是什么样的店？"
    - "金谷园现在排队吗？"
    - "明天中午几点去不怎么排？"
@@ -107,7 +115,7 @@ keywords:
    - "金谷园有什么好吃的？"
    - "能打包生饺子带走吗？"
    - "帮我来份饺子到店自取"
-3. 说明技能会实时调用 MCP 服务获取最新数据，信息准确可靠
+4. 说明查询走金谷园 MCP 实时数据；真实取号走内嵌 meituan-queue，与 MCP 查询分离
 
 ## 内嵌 Skill：美团排队取号
 
@@ -193,7 +201,7 @@ keywords:
 
 ## 维护者参考
 
-- MCP 端点：以 `skill.json` 中 `mcp_server.url` 为准
+- MCP 端点：以 `skill.json` 中 `mcp_server`（`url` + `transport`）为准；Agent **优先接入为 MCP Server**，裸 HTTP 仅无客户端时的兜底
 - 协议：MCP Streamable HTTP（POST 走 MCP 协议，GET 返回业务数据 JSON）
 - 部署平台：腾讯云 CloudBase 云函数
 - MCP Server 版本号以 `package.json` 为单一来源（`src/index.js` 通过 `createRequire` 动态读取，不再硬编码）
