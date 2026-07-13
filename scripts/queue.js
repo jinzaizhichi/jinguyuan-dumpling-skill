@@ -624,6 +624,10 @@ async function run(argv, overrides = {}) {
     return pollAuthorizationWait(parsed, deps);
   }
 
+  if ((parsed.command === 'take-number' || parsed.command === 'order-cancel') && !parsed.confirmed) {
+    return confirmationRequired(parsed);
+  }
+
   let cached;
   try {
     cached = await deps.passport.getToken();
