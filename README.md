@@ -2,7 +2,7 @@
 
 ![Version](https://img.shields.io/github/v/tag/JinGuYuan/jinguyuan-dumpling-skill?label=version&color=blue&sort=semver) ![License](https://img.shields.io/badge/license-MIT-green) ![MCP](https://img.shields.io/badge/protocol-MCP-purple) ![Transport](https://img.shields.io/badge/transport-Streamable%20HTTP-orange)
 
-这是一个 AI Skill——安装后，你的 AI 助手就能帮你查金谷园在哪、几点开门、这会儿排不排队、几点去更稳，也能查推荐菜、外卖和生饺子吃法；需要时，还能帮你在线排队取号。
+这是一个 AI Skill——安装后，你的 AI 助手就能帮你查金谷园在哪、几点开门、这会儿排不排队、几点去更稳，也能查推荐菜、外卖和生饺子打包怎么煮；需要时，还能帮你在线排队取号。
 
 开了快二十年的饺子馆，有了自己的AI服务。
 
