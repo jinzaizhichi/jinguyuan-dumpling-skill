@@ -2,7 +2,7 @@
 
 ![Version](https://img.shields.io/github/v/tag/JinGuYuan/jinguyuan-dumpling-skill?label=version&color=blue&sort=semver) ![License](https://img.shields.io/badge/license-MIT-green) ![MCP](https://img.shields.io/badge/protocol-MCP-purple) ![Transport](https://img.shields.io/badge/transport-Streamable%20HTTP-orange)
 
-这是一个 AI Skill——安装后，你的 AI 助手就能帮你查金谷园在哪、几点开门、这会儿排不排队、几点去更稳，也能查推荐菜、外卖和生饺子吃法。北邮店需要时，还能帮你在线排队取号。
+这是一个 AI Skill——安装后，你的 AI 助手就能帮你查金谷园在哪、几点开门、这会儿排不排队、几点去更稳，也能查推荐菜、外卖和生饺子吃法；需要时，还能帮你在线排队取号。
 
 开了快二十年的饺子馆，有了自己的AI服务。
 
@@ -58,15 +58,11 @@
 
 首次使用需完成美团账号授权（AI 助手会引导你完成）。授权在本机保存，跨会话或重装 Skill 后也可继续使用；Token 不会展示给你。
 
-### 关于美团授权组件（说明一下）
+### 美团授权组件与安全说明
 
-只查店、查排队状态时，走金谷园自己的 MCP，**不会**加载美团登录组件。
+只有真实取号、查询本人进度或取消排队时，才会加载随包附带的美团授权与签名组件；普通店铺和排队查询不会加载。
 
-只有你要 **真实取号 / 查本人排队进度 / 取消排队** 时，本机才会运行 Skill 里随包附带的美团用户授权工具（`@mtuser/pt-passport`，以及它依赖的 `@sec/cliguard` 签名核心）。它负责 **Passport 登录、接口请求签名与设备侧风控校验**。
-
-签名核心是上游提供的混淆代码，审查者可将它按安全敏感依赖处理。Skill 已移除上游入口中加载即启动的后台守护进程、用户目录动态更新机制和 `http/https` 全局拦截，只保留 Passport 实际需要的 `fetch` 请求签名与公参注入。金谷园自己的排队编排和适配层（如 `scripts/queue.js` 及签名入口 `index.js`）均为明文，可直接审查。
-
-授权产生的登录凭证只保存在你本机用户目录（`~/.jinguyuan/`），不会打进 Git 仓库，也不会发给金谷园 MCP。若只想用查询、不想走美团授权，不发起取号即可。
+其中包含上游提供的混淆签名核心。Skill 已移除后台守护、动态更新和全局网络拦截，仅保留授权及请求签名所需能力。凭证只保存在本机 `~/.jinguyuan/`，不会提交到仓库或发送给金谷园 MCP。详细边界可查看 `SKILL.md` 与相关源码。
 
 ## 运行环境
 
