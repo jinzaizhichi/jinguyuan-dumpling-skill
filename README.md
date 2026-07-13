@@ -70,13 +70,15 @@ Agent 会自动克隆仓库并安装到对应的 Skill 目录。
 
 安装 Skill 后无需另行配置 MCP：宿主已有金谷园 MCP 时直接使用；没有时由随包纯 JS 客户端完成实时查询，不生成临时脚本。
 
-若只需要店铺、菜品和排队信息查询，也可以不安装 Skill，单独接入金谷园 MCP；在线取号、本人进度和取消排队等本地授权能力需要安装 Skill。
+## 关于金谷园 MCP
 
-**MCP 接入信息（可选，仅查询）：**
+金谷园同时提供独立的 MCP 服务。若只需要查询店铺、菜品和排队信息，可以不安装 Skill，直接接入金谷园 MCP；在线取号、本人进度和取消排队等本地授权能力仍需安装 Skill。
 
-- 接入点：`https://mcp.jinguyuan.cloud`
-- 标准：Model Context Protocol（MCP）
-- 传输：Streamable HTTP
+| 项目 | 内容 |
+|------|------|
+| 接入点 | `https://mcp.jinguyuan.cloud` |
+| 协议 | Model Context Protocol（MCP） |
+| 传输方式 | Streamable HTTP |
 
 ## 发布平台
 
