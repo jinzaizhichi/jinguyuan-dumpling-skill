@@ -81,7 +81,7 @@
 
 直接拷贝下面这句话发给你的 AI 助手：
 
-> 帮我安装金谷园饺子馆 Skill，并连接 skill.json 中声明的金谷园 MCP 服务。仓库地址：https://gitee.com/JinGuYuan/jinguyuan-dumpling-skill
+> 安装 https://gitee.com/JinGuYuan/jinguyuan-dumpling-skill-v2
 
 Agent 会自动克隆仓库并安装到对应的 Skill 目录。
 
