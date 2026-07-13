@@ -58,7 +58,7 @@
 
 ## 运行环境
 
-这是一个单 Skill，支持 Windows、macOS 和 Linux。真实排队动作需要 Node.js 18 或更高版本，无需 npm 安装。
+支持 Windows、macOS 和 Linux，需要 Node.js 18 或更高版本，无需 npm 安装。
 
 ## 安装
 
