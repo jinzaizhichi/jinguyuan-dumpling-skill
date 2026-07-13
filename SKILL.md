@@ -1,7 +1,7 @@
 ---
 name: jinguyuan-dumpling-skill
 description: 金谷园饺子馆信息查询与在线排队取号。通过 MCP 查询基础店铺信息（餐厅介绍、门店、营业时间、外卖配送、Wi-Fi）、生饺子打包、最新动态、当前排队状态、单点到店预估、午市/晚市排队事实与策略建议、到店自取叫号下单、菜品配方、店长推荐菜；内置真实排队动作仅用于在线取号、本人排队进度查询、取消排队。
-version: 2.2.4
+version: 2.2.5
 alwaysApply: false
 keywords:
   - 金谷园
@@ -87,7 +87,7 @@ node <skill_dir>/scripts/queue.js <command>
 
 **安全边界**：取号 / 取消须用户**本轮明确确认**后再带 `--confirm`；五道口不引导线上取号。
 
-**美团组件安全口径**：仅真实取号/进度/取消加载 `scripts/vendor` 内 `@mtuser/pt-passport`；普通店铺和排队查询不会加载。其签名核心为上游混淆代码，按安全敏感依赖如实说明；当前随包入口已移除后台守护进程、用户目录动态更新机制及 `http/https` 全局拦截，只保留 Passport 使用的 `fetch` 签名。Token 仅存本机 `~/.jinguyuan/`，不会提交到仓库或发送给金谷园 MCP；用户可拒绝授权、只做 MCP 查询。
+**美团组件安全口径**：仅真实取号/进度/取消加载 `scripts/vendor` 内 `@mtuser/pt-passport`；普通店铺和排队查询不会加载。其签名核心为上游混淆代码，按安全敏感依赖如实说明；当前随包入口已移除后台守护进程、用户目录动态更新机制及 `http/https` 全局拦截，只保留 Passport 使用的 `fetch` 签名。Token 仅存本机 `~/.jinguyuan/`，不会提交到仓库或发送给金谷园 MCP。
 
 ## 排队路由
 
