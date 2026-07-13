@@ -1,7 +1,7 @@
 ---
 name: jinguyuan-dumpling-skill
 description: 金谷园饺子馆信息查询与在线排队取号。通过 MCP 查询基础店铺信息（餐厅介绍、门店、营业时间、外卖配送、Wi-Fi）、生饺子打包、最新动态、当前排队状态、单点到店预估、午市/晚市排队事实与策略建议、到店自取叫号下单、菜品配方、店长推荐菜；内置真实排队动作仅用于在线取号、本人排队进度查询、取消排队。
-version: 2.1.9
+version: 2.1.10
 alwaysApply: false
 keywords:
   - 金谷园
@@ -44,7 +44,7 @@ keywords:
 ## Agent 硬约束
 
 - 文中示例数据**仅作格式参考**；回答用户前**必须调 MCP 实时数据**，禁止拿示例当真。
-- MCP：读 `skill.json` → `mcp_server`，**优先接成远程 MCP 端点**再调工具；工具列表以 `tools/list` 为准。禁止每轮临时写 HTTP/脚本为主路径。细则 → [references/mcp-access.md](references/mcp-access.md)。
+- **MCP 首次使用门禁**：处理任何需要 MCP 的金谷园查询前，先确认金谷园工具已在当前宿主可用。若不可用，读 `skill.json` → `mcp_server`，优先用宿主能力登记为持久远程 MCP 端点并以 `tools/list` 验证；宿主要求用户在 UI 配置或重启时，明确说明端点并等待，不得假装已接入。仅宿主完全没有 MCP 客户端时才走固定 HTTP 兜底，禁止每轮临时写脚本。细则 → [references/mcp-access.md](references/mcp-access.md)。
 - 排队回答优先读返回体合同字段（`mainScenario` / `replyPolicy` 等）。细则 → [references/mcp-reply-contract.md](references/mcp-reply-contract.md)。
 - **禁止**：等待桌数换算分钟；历史参考说成当天事实；总等待冒充个人进度；声称 MCP 已取号/取消/查到个人进度；五道口引导线上取号。
 - 真实取号 / 本人进度 / 取消 → 本 Skill `scripts/queue.js` + [references/queue-actions.md](references/queue-actions.md)，与 MCP 查询分离。
@@ -83,6 +83,7 @@ node <skill_dir>/scripts/queue.js <command>
 2. PNG 直接在当前工作区根目录，文件名为 **`jinguyuan-auth-qr-<authRunId>.png`**（非隐藏、无子目录；`data.qrImagePath` = **绝对路径**）。始终使用返回路径，不猜文件名；推荐原样贴 `data.userReplyMarkdown`。
 3. **主气泡必须**有：`![美团授权二维码](绝对路径)`（有图时）+ 可点链接与明文 URL。仅 Read / 仅附件侧栏 / 步骤卡「已展示」**不算**。
 4. 告知用户授权后稍候；宿主若未自动继续，用户可回复“已授权”。收到回复后短查 `auth-status`，再继续原任务。部分宿主能自动续跑，部分不能，**禁止**说“无需回复”或保证一定自动通知。无 `authLink` 时先 `logout` 成功再重跑。Token：`~/.jinguyuan/passport-auth.json`。
+5. **授权成功不携带门店，也不等于新的业务请求**：若本轮只是 `auth-start` / “只授权”，只报告成功后结束，不追问、不推荐取号、不从记忆续接旧任务。仅当授权由本轮明确的业务命令触发时，才恢复该原命令；门店必须来自本轮用户输入或原命令，禁止从跨任务记忆推断。
 
 **安全边界**：取号 / 取消须用户**本轮明确确认**后再带 `--confirm`；五道口不引导线上取号。
 
