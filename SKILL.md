@@ -87,7 +87,7 @@ node <skill_dir>/scripts/queue.js <command>
 
 **安全边界**：取号 / 取消须用户**本轮明确确认**后再带 `--confirm`；五道口不引导线上取号。
 
-**美团组件安全口径**：仅真实取号/进度/取消加载 `scripts/vendor` 内 `@mtuser/pt-passport`。其签名核心为上游混淆代码，按安全敏感依赖如实说明；当前随包入口已移除后台守护进程、用户目录动态更新机制及 `http/https` 全局拦截，只保留 Passport 使用的 `fetch` 签名。Token 仅存本机 `~/.jinguyuan/`；用户可拒绝授权、只做 MCP 查询。
+**美团组件安全口径**：仅真实取号/进度/取消加载 `scripts/vendor` 内 `@mtuser/pt-passport`；普通店铺和排队查询不会加载。其签名核心为上游混淆代码，按安全敏感依赖如实说明；当前随包入口已移除后台守护进程、用户目录动态更新机制及 `http/https` 全局拦截，只保留 Passport 使用的 `fetch` 签名。Token 仅存本机 `~/.jinguyuan/`，不会提交到仓库或发送给金谷园 MCP；用户可拒绝授权、只做 MCP 查询。
 
 ## 排队路由
 
