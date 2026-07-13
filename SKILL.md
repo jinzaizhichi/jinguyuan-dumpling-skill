@@ -1,7 +1,7 @@
 ---
 name: jinguyuan-dumpling-skill
 description: 金谷园饺子馆信息查询与在线排队取号。通过 MCP 查询基础店铺信息（餐厅介绍、门店、营业时间、外卖配送、Wi-Fi）、生饺子打包、最新动态、当前排队状态、单点到店预估、午市/晚市排队事实与策略建议、到店自取叫号下单、菜品配方、店长推荐菜；内置真实排队动作仅用于在线取号、本人排队进度查询、取消排队。
-version: 2.1.10
+version: 2.2.0
 alwaysApply: false
 keywords:
   - 金谷园
@@ -44,7 +44,7 @@ keywords:
 ## Agent 硬约束
 
 - 文中示例数据**仅作格式参考**；回答用户前**必须调 MCP 实时数据**，禁止拿示例当真。
-- **MCP 首次使用门禁**：处理任何需要 MCP 的金谷园查询前，先确认金谷园工具已在当前宿主可用。若不可用，读 `skill.json` → `mcp_server`，优先用宿主能力登记为持久远程 MCP 端点并以 `tools/list` 验证；宿主要求用户在 UI 配置或重启时，明确说明端点并等待，不得假装已接入。仅宿主完全没有 MCP 客户端时才走固定 HTTP 兜底，禁止每轮临时写脚本。细则 → [references/mcp-access.md](references/mcp-access.md)。
+- **MCP 查询路由**：当前宿主已提供金谷园原生 MCP 工具时直接使用；否则运行随包固定客户端 `node <skill_dir>/scripts/mcp-client.js`。不得为查询自动修改宿主 MCP 配置，不得要求用户先信任/重启，也不得临时编写 shell、HTTP、`.js` / `.py` 脚本。调用前先 `list` 读取实时工具 schema，再用 `call`。细则 → [references/mcp-access.md](references/mcp-access.md)。
 - 排队回答优先读返回体合同字段（`mainScenario` / `replyPolicy` 等）。细则 → [references/mcp-reply-contract.md](references/mcp-reply-contract.md)。
 - **禁止**：等待桌数换算分钟；历史参考说成当天事实；总等待冒充个人进度；声称 MCP 已取号/取消/查到个人进度；五道口引导线上取号。
 - 真实取号 / 本人进度 / 取消 → 本 Skill `scripts/queue.js` + [references/queue-actions.md](references/queue-actions.md)，与 MCP 查询分离。
@@ -54,7 +54,7 @@ keywords:
 ## 安装后引导
 
 当用户刚安装此技能时，Agent 应主动：
-1. **确保金谷园 MCP 已接入**：读 `skill.json` 的 `mcp_server`，能配远程 MCP 端点则配上并保持可用；不要默认改用手写 HTTP
+1. **确保实时查询可用**：原生金谷园 MCP 工具已存在则复用；否则使用随包 `scripts/mcp-client.js`，不要修改宿主 MCP 配置
 2. 告知用户可以直接问金谷园相关问题，比如地址、营业时间、排队方式、推荐菜等
 3. 给出几个推荐的首次提问，例如：
    - "金谷园现在排队吗？"

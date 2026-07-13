@@ -85,6 +85,8 @@
 
 Agent 会自动克隆仓库并安装到对应的 Skill 目录。
 
+安装后无需先配置 MCP：宿主已有金谷园 MCP 时直接使用；没有时由随包纯 JS 客户端完成实时查询，不生成临时脚本。
+
 ## 发布平台
 
 - GitHub：https://github.com/JinGuYuan/jinguyuan-dumpling-skill
