@@ -267,9 +267,10 @@ async function dispatchBusiness(parsed, token, makeQueueApi) {
 }
 
 /**
- * Pre-built user-facing markdown (V1-style inline image).
- * Image tag MUST use an absolute path so chat UIs can inline it (relative paths
- * often become attachment cards). Always include plain URL as cloud fallback.
+ * Pre-built user-facing markdown.
+ * Prefer the workspace-root relative filename: it has no spaces and lets hosts
+ * resolve the file through their workspace asset bridge. The absolute path is
+ * still returned separately for Agent Read and cleanup.
  */
 function buildAuthUserReplyMarkdown({ authLink, qrImagePath }) {
   const lines = [];
@@ -301,10 +302,10 @@ function buildAuthUserReplyMarkdown({ authLink, qrImagePath }) {
 }
 
 const AUTH_INLINE_QR_HINT =
-  'CRITICAL（对齐 V1 内联图）：' +
-  '① 若有 data.qrImagePath：先 Read 该 PNG（绝对路径），再把 Markdown `![美团授权二维码](<绝对路径>)` **写入主气泡正文**——这是聊天框可见图的关键；' +
+  'CRITICAL（二维码展示）：' +
+  '① 若有 data.qrImagePath：先 Read 绝对路径 PNG，再原样使用 data.userReplyMarkdown 中的工作区相对图片名；不要把含空格的绝对路径重写进 Markdown；' +
   '② ⚠️ 仅 Read / 仅附件侧栏 / 步骤卡「已展示」都不算：用户扫不到码；' +
-  '③ 推荐整段粘贴 data.userReplyMarkdown（已含绝对路径图 + 链接）；' +
+  '③ 推荐整段粘贴 data.userReplyMarkdown（已含工作区相对图片名 + 链接）；' +
   '④ 链接必现（云端主通道）；' +
   '⑤ 告知用户授权后稍候，若没有自动继续则回复「已授权」；收到回复后执行 auth-status 短查；禁止保证一定自动通知，禁止 auth-poll --wait。';
 
@@ -332,8 +333,9 @@ async function beginAuthorization(deps, { force = false } = {}) {
     userReplyMarkdown: null,
     agentHint: AUTH_INLINE_QR_HINT,
   };
-  // Absolute path for markdown inline + cleanup (V1: absolute path in ![](...)).
+  // Absolute path is retained for Agent Read and owned-file cleanup.
   let qrImagePathAbs = null;
+  let qrImagePathRelative = null;
   try {
     const qr = await deps.createAuthQr(authLink, {
       tmpDir: deps.tmpDir,
@@ -342,13 +344,12 @@ async function beginAuthorization(deps, { force = false } = {}) {
     });
     if (typeof qr?.imagePath === 'string') {
       qrImagePathAbs = path.resolve(qr.imagePath);
-      // Primary: absolute path for chat inline (V1).
       data.qrImagePath = qrImagePathAbs;
-      // Optional: workspace-relative for tools that prefer cwd-relative Read.
-      data.qrImagePathRelative = toWorkspaceRelativePath(
+      qrImagePathRelative = toWorkspaceRelativePath(
         qrImagePathAbs,
         deps.workspaceDir,
       );
+      data.qrImagePathRelative = qrImagePathRelative;
     }
   } catch {
     // authLink remains a complete fallback when local QR generation fails.
@@ -356,8 +357,7 @@ async function beginAuthorization(deps, { force = false } = {}) {
 
   data.userReplyMarkdown = buildAuthUserReplyMarkdown({
     authLink,
-    // Inline tag must be absolute — relative paths often render as attachments.
-    qrImagePath: qrImagePathAbs || null,
+    qrImagePath: qrImagePathRelative || qrImagePathAbs || null,
   });
 
   try {
@@ -378,14 +378,14 @@ async function beginAuthorization(deps, { force = false } = {}) {
 
   const message = [
     '需要完成美团授权。',
-    '【Agent 必做·对齐 V1】有图时：Read 绝对路径 PNG 后，把 `![美团授权二维码](<绝对路径>)` 写进主气泡正文（仅 Read/仅附件不算）；并原样贴 data.userReplyMarkdown（链接必现）。',
+    '【Agent 必做】有图时先 Read data.qrImagePath，再原样贴 data.userReplyMarkdown；其中使用工作区根目录的短相对文件名，禁止改写为含空格的绝对路径。仅 Read/仅附件不算；链接必须出现。',
     `授权链接: ${authLink}`,
     data.qrImagePath
       ? `二维码图绝对路径: ${data.qrImagePath}` +
         (data.qrImagePathRelative
           ? `（工作区相对: ${data.qrImagePathRelative}）`
           : '') +
-        '；主气泡必须出现 Markdown 图片标签，不要只当附件。'
+        '；主气泡使用返回的工作区相对图片名，不要自行拼绝对路径。'
       : '本机未生成二维码图，请至少发出上方链接。',
     '后台已在等待；请用户授权后稍候，若没有自动继续则回复「已授权」；收到回复再执行 auth-status。不要保证一定自动通知；禁止 auth-poll --wait。',
   ].join(' ');
