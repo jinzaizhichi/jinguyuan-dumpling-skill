@@ -293,7 +293,7 @@ function buildAuthUserReplyMarkdown({ authLink, qrImagePath }) {
   lines.push('');
   lines.push(authLink);
   lines.push('');
-  lines.push('> ⏱ 约 10 分钟有效。后台已在等待授权，无需回复「已授权」。');
+  lines.push('> ⏱ 约 10 分钟有效。完成授权后请稍候；若没有自动继续，请回复「已授权」。');
   lines.push(
     '> 云端：用户手机通常打不开 Agent 本机路径；**链接必须出现在主气泡**。桌面侧应用 `![](绝对路径)` 把图嵌进气泡，勿只发附件。',
   );
@@ -306,7 +306,7 @@ const AUTH_INLINE_QR_HINT =
   '② ⚠️ 仅 Read / 仅附件侧栏 / 步骤卡「已展示」都不算：用户扫不到码；' +
   '③ 推荐整段粘贴 data.userReplyMarkdown（已含绝对路径图 + 链接）；' +
   '④ 链接必现（云端主通道）；' +
-  '⑤ 展示后 auth-status 短查；禁止 auth-poll --wait。';
+  '⑤ 告知用户授权后稍候，若没有自动继续则回复「已授权」；收到回复后执行 auth-status 短查；禁止保证一定自动通知，禁止 auth-poll --wait。';
 
 async function beginAuthorization(deps, { force = false } = {}) {
   let started;
@@ -387,7 +387,7 @@ async function beginAuthorization(deps, { force = false } = {}) {
           : '') +
         '；主气泡必须出现 Markdown 图片标签，不要只当附件。'
       : '本机未生成二维码图，请至少发出上方链接。',
-    '后台已在等待；展示后再 auth-status。禁止 auth-poll --wait。',
+    '后台已在等待；请用户授权后稍候，若没有自动继续则回复「已授权」；收到回复再执行 auth-status。不要保证一定自动通知；禁止 auth-poll --wait。',
   ].join(' ');
 
   return {

@@ -1,7 +1,7 @@
 ---
 name: jinguyuan-dumpling-skill
 description: 金谷园饺子馆信息查询与在线排队取号。通过 MCP 查询基础店铺信息（餐厅介绍、门店、营业时间、外卖配送、Wi-Fi）、生饺子打包、最新动态、当前排队状态、单点到店预估、午市/晚市排队事实与策略建议、到店自取叫号下单、菜品配方、店长推荐菜；内置真实排队动作仅用于在线取号、本人排队进度查询、取消排队。
-version: 2.1.8
+version: 2.1.9
 alwaysApply: false
 keywords:
   - 金谷园
@@ -82,7 +82,7 @@ node <skill_dir>/scripts/queue.js <command>
 1. **主动预授权**用 `auth-start`（一条命令拿到链接 + 二维码 + 后台轮询）。业务命令（`index` / `take-number` 等）发现没 Token 时也会自动走同一流程。**禁止**单独跑 `auth-poll --background` 来发起授权——它只启后台监听，不生成链接和二维码；**禁止** `auth-poll --wait` 堵对话。
 2. PNG 直接在当前工作区根目录，文件名为 **`jinguyuan-auth-qr-<authRunId>.png`**（非隐藏、无子目录；`data.qrImagePath` = **绝对路径**）。始终使用返回路径，不猜文件名；推荐原样贴 `data.userReplyMarkdown`。
 3. **主气泡必须**有：`![美团授权二维码](绝对路径)`（有图时）+ 可点链接与明文 URL。仅 Read / 仅附件侧栏 / 步骤卡「已展示」**不算**。
-4. 展示后短查 `auth-status`。无 `authLink` 时先 `logout` 成功再重跑。Token：`~/.jinguyuan/passport-auth.json`。
+4. 告知用户授权后稍候；宿主若未自动继续，用户可回复“已授权”。收到回复后短查 `auth-status`，再继续原任务。部分宿主能自动续跑，部分不能，**禁止**说“无需回复”或保证一定自动通知。无 `authLink` 时先 `logout` 成功再重跑。Token：`~/.jinguyuan/passport-auth.json`。
 
 **安全边界**：取号 / 取消须用户**本轮明确确认**后再带 `--confirm`；五道口不引导线上取号。
 
