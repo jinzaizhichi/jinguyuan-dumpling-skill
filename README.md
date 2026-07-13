@@ -7,11 +7,6 @@
 开了快二十年的饺子馆，有了自己的AI服务。
 
 
-## 版本线说明
-
-- **当前默认（本仓库 `main`）**：Skill **2.x**（纯 Node 排队运行时，无需 npm 安装依赖）。
-- **1.x 冻结线**：请使用分支 [`1.x`](https://gitee.com/JinGuYuan/jinguyuan-dumpling-skill/tree/1.x) 或 tag [`v1.0.2`](https://gitee.com/JinGuYuan/jinguyuan-dumpling-skill/tree/v1.0.2) / [`v1-stable`](https://gitee.com/JinGuYuan/jinguyuan-dumpling-skill/tree/v1-stable)。1.x 含嵌套 meituan-queue 安装形态，**不再作为默认安装源**。
-
 ## 关于金谷园
 
 北邮旁边的饺子馆。官网：[jinguyuan.cloud](https://jinguyuan.cloud)
