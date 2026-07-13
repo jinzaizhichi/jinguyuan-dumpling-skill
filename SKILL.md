@@ -80,7 +80,7 @@ node <skill_dir>/scripts/queue.js <command>
 **授权（`AUTH_REQUIRED`）摘要**：
 
 1. **主动预授权**用 `auth-start`（一条命令拿到链接 + 二维码 + 后台轮询）。业务命令（`index` / `take-number` 等）发现没 Token 时也会自动走同一流程。**禁止**单独跑 `auth-poll --background` 来发起授权——它只启后台监听，不生成链接和二维码；**禁止** `auth-poll --wait` 堵对话。
-2. PNG 在工作区 **`jinguyuan-auth-qr.png`**（非隐藏文件；`data.qrImagePath` = **绝对路径**）。推荐原样贴 `data.userReplyMarkdown`。
+2. PNG 直接在当前工作区根目录，文件名为 **`jinguyuan-auth-qr-<authRunId>.png`**（非隐藏、无子目录；`data.qrImagePath` = **绝对路径**）。始终使用返回路径，不猜文件名；推荐原样贴 `data.userReplyMarkdown`。
 3. **主气泡必须**有：`![美团授权二维码](绝对路径)`（有图时）+ 可点链接与明文 URL。仅 Read / 仅附件侧栏 / 步骤卡「已展示」**不算**。
 4. 展示后短查 `auth-status`。无 `authLink` 时先 `logout` 成功再重跑。Token：`~/.jinguyuan/passport-auth.json`。
 
@@ -159,7 +159,7 @@ node <skill_dir>/scripts/queue.js <command>
 
 ### 维护者
 
-- 2.x 源码：https://gitee.com/JinGuYuan/jinguyuan-dumpling-skill-v2
+- 2.x 源码：https://gitee.com/JinGuYuan/jinguyuan-dumpling-skill
 - ClawHub slug：`jinguyuan-dumpling-skill`（展示名「金谷园饺子馆 Skill」）
 - MCP 实现：独立仓库 `jgy-mcp`；本仓库 `package.json` 仅 Skill 侧 `version` + `engines.node`（Node ≥18）
 - 1.x 冻结：分支 `1.x` / tag `v1.0.2` · `v1-stable`

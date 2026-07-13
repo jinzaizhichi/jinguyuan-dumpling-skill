@@ -14,6 +14,7 @@ const {
 } = require('./auth-qr');
 const { createQueueApi } = require('./lib/queue-api');
 const { success, failure } = require('./lib/result');
+const { createAuthRunId, isAuthRunId } = require('./lib/auth-run');
 const {
   startBackgroundPoll,
   readState,
@@ -79,11 +80,19 @@ function parseArguments(argv) {
 
   // Internal worker for detached background poll (not for Agent use).
   if (command === 'auth-poll-worker') {
-    if (argv.length === 1) return { command, mode: 'worker' };
-    if (argv.length === 3 && argv[1] === '--qr-image-path' && argv[2]) {
-      return { command, mode: 'worker', qrImagePath: argv[2] };
+    const rest = argv.slice(1);
+    let authRunId;
+    let qrImagePath;
+    for (let index = 0; index < rest.length; index += 2) {
+      const name = rest[index];
+      const value = rest[index + 1];
+      if (!value || value.startsWith('--')) return null;
+      if (name === '--auth-run-id' && authRunId === undefined) authRunId = value;
+      else if (name === '--qr-image-path' && qrImagePath === undefined) qrImagePath = value;
+      else return null;
     }
-    return null;
+    if (!isAuthRunId(authRunId)) return null;
+    return { command, mode: 'worker', authRunId, qrImagePath };
   }
 
   if (command === 'auth-poll') {
@@ -314,8 +323,10 @@ async function beginAuthorization(deps, { force = false } = {}) {
   }
 
   const authLink = started.authLink;
+  const authRunId = deps.createAuthRunId();
   const data = {
     authLink,
+    authRunId,
     pollMode: 'background',
     // Hard deliverable: copy this string into the user-visible main bubble this turn.
     userReplyMarkdown: null,
@@ -326,6 +337,7 @@ async function beginAuthorization(deps, { force = false } = {}) {
   try {
     const qr = await deps.createAuthQr(authLink, {
       tmpDir: deps.tmpDir,
+      authRunId,
       clientId: CLIENT_ID,
     });
     if (typeof qr?.imagePath === 'string') {
@@ -351,6 +363,7 @@ async function beginAuthorization(deps, { force = false } = {}) {
   try {
     const startedBg = deps.startBackgroundPoll({
       homeDir: deps.homeDir,
+      authRunId,
       qrImagePath: qrImagePathAbs || null,
       scriptPath: deps.scriptPath,
       execPath: deps.execPath,
@@ -439,15 +452,18 @@ function startAuthPollBackground(parsed, deps) {
       return invalidArguments();
     }
   }
+  const authRunId = deps.createAuthRunId();
   try {
     const started = deps.startBackgroundPoll({
       homeDir: deps.homeDir,
+      authRunId,
       qrImagePath: parsed.qrImagePath || null,
       scriptPath: deps.scriptPath,
       execPath: deps.execPath,
     });
     return success('AUTH_POLL_STARTED', '已在后台等待授权，不阻塞当前对话。', {
       pollMode: 'background',
+      authRunId,
       pollPid: started?.pid ?? null,
       qrImagePath: parsed.qrImagePath || null,
       agentHint: '请先确保用户主气泡已展示链接与二维码图，然后周期性执行 auth-status（短命令）。',
@@ -461,6 +477,7 @@ async function runAuthPollWorker(parsed, deps) {
   const result = await pollAuthorizationWait(parsed, deps);
   try {
     deps.recordPollResult(deps.homeDir, result, {
+      authRunId: parsed.authRunId,
       qrImagePath: parsed.qrImagePath || null,
     });
   } catch {
@@ -469,7 +486,7 @@ async function runAuthPollWorker(parsed, deps) {
   return result;
 }
 
-function authStatus(deps) {
+async function authStatus(deps) {
   const state = deps.readPollState(deps.homeDir);
   if (!state) {
     return failure('AUTH_STATUS_NONE', '当前没有进行中的授权轮询记录。可重新触发需授权的命令。');
@@ -485,6 +502,7 @@ function authStatus(deps) {
         : '授权状态已更新。');
   const data = {
     pollMode: 'background',
+    authRunId: state.authRunId || null,
     status: state.status || null,
     qrImagePath: state.qrImagePath || null,
     startedAt: state.startedAt || null,
@@ -496,6 +514,24 @@ function authStatus(deps) {
     return success('AUTH_SUCCESS', message, data);
   }
   if (code === 'AUTH_PENDING' || state.status === 'pending') {
+    try {
+      const cached = await deps.passport.getToken();
+      if (tokenFrom(cached)) {
+        const result = success('AUTH_SUCCESS', '授权成功。');
+        try {
+          deps.recordPollResult(deps.homeDir, result, {
+            authRunId: state.authRunId,
+            qrImagePath: state.qrImagePath || null,
+          });
+        } catch {
+          // A valid cached Token wins even if the local status write fails.
+        }
+        data.status = 'success';
+        return success('AUTH_SUCCESS', '授权成功。', data);
+      }
+    } catch {
+      // A transient cache lookup failure must not replace the live pending state.
+    }
     return failure('AUTH_PENDING', message, data);
   }
   if (code === 'AUTH_CANCELLED' || state.status === 'cancelled') {
@@ -517,7 +553,7 @@ function authStatus(deps) {
 
 function defaultDependencies(overrides) {
   const homeDir = overrides.homeDir || os.homedir();
-  // QR PNG: flat visible file under session workspace (`jinguyuan-auth-qr.png`).
+  // QR PNG: flat visible run-owned file under the session workspace root.
   // Passport token/poll-state stay under homeDir; process temp on OS tmpdir.
   const workspaceDir = overrides.workspaceDir || process.cwd();
   const qrRootDir =
@@ -535,6 +571,7 @@ function defaultDependencies(overrides) {
     startBackgroundPoll: overrides.startBackgroundPoll || startBackgroundPoll,
     readPollState: overrides.readPollState || readState,
     recordPollResult: overrides.recordPollResult || recordPollResult,
+    createAuthRunId: overrides.createAuthRunId || createAuthRunId,
     // createAuthQr / cleanup still take { tmpDir } as the owned QR root.
     tmpDir: qrRootDir,
     qrRootDir,
