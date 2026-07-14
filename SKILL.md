@@ -1,7 +1,7 @@
 ---
 name: jinguyuan-dumpling-skill
 description: 金谷园饺子馆信息查询与在线排队取号。通过 MCP 查询基础店铺信息（餐厅介绍、门店、营业时间、外卖配送、Wi-Fi）、生饺子打包、最新动态、当前排队状态、单点到店预估、午市/晚市排队事实与策略建议、到店自取叫号下单、菜品配方、店长推荐菜；内置真实排队动作仅用于在线取号、本人排队进度查询、取消排队。
-version: 2.2.5
+version: 2.2.6
 alwaysApply: false
 keywords:
   - 金谷园
@@ -43,7 +43,7 @@ keywords:
 
 ## Agent 硬约束
 
-- 文中示例数据**仅作格式参考**；回答用户前**必须调 MCP 实时数据**，禁止拿示例当真。
+- 文中示例数据**仅作格式参考**；回答用户前**必须调 MCP 最新数据**，禁止拿示例当真。用户问“现在排队吗”时，必须逐店检查 `当前排队状态.门店[].数据是否新鲜`；只有 `true` 才能把等待桌数说成当前状态，过期记录只能说明最近采集时间，不能冒充实时事实。
 - **MCP 查询路由**：当前宿主已提供金谷园原生 MCP 工具时直接使用；否则运行随包固定客户端 `node <skill_dir>/scripts/mcp-client.js`。不得为查询自动修改宿主 MCP 配置，不得要求用户先信任/重启，也不得临时编写 shell、HTTP、`.js` / `.py` 脚本。调用前先 `list` 读取实时工具 schema，再用 `call`。细则 → [references/mcp-access.md](references/mcp-access.md)。
 - 排队回答优先读返回体合同字段（`mainScenario` / `replyPolicy` 等）。细则 → [references/mcp-reply-contract.md](references/mcp-reply-contract.md)。
 - **禁止**：等待桌数换算分钟；历史参考说成当天事实；总等待冒充个人进度；声称 MCP 已取号/取消/查到个人进度；五道口引导线上取号。
@@ -54,7 +54,7 @@ keywords:
 ## 安装后引导
 
 当用户刚安装此技能时，Agent 应主动：
-1. **确保实时查询可用**：原生金谷园 MCP 工具已存在则复用；否则使用随包 `scripts/mcp-client.js`，不要修改宿主 MCP 配置
+1. **确保最新数据查询可用**：原生金谷园 MCP 工具已存在则复用；否则使用随包 `scripts/mcp-client.js`，不要修改宿主 MCP 配置
 2. 告知用户可以直接问金谷园相关问题，比如地址、营业时间、排队方式、推荐菜等
 3. 给出几个推荐的首次提问，例如：
    - "金谷园现在排队吗？"
@@ -64,7 +64,7 @@ keywords:
    - "金谷园有什么好吃的？"
    - "能打包生饺子带走吗？"
    - "帮我来份饺子到店自取"
-4. 说明查询走金谷园 MCP 实时数据；真实取号等本地动作见下文，与 MCP 查询分离
+4. 说明查询走金谷园 MCP 最新快照；当前排队以返回的新鲜度判断为准，真实取号等本地动作见下文，与 MCP 查询分离
 5. **预授权（可选）**：若用户想提前完成美团授权，运行 `node <skill_dir>/scripts/queue.js auth-start`，一次拿到授权链接 + 二维码 + 后台轮询。不要单独跑 `auth-poll --background`——它只启动后台监听，不生成链接和二维码。
 
 ## 内置真实排队动作
@@ -94,7 +94,7 @@ node <skill_dir>/scripts/queue.js <command>
 | 场景 | 工具 | 约束 |
 |------|------|------|
 | 宽泛餐段没说具体时间 | `ask_queue_visit_time` | 只追问"你想大概几点到？"，不查当前，不默认 12:00/18:00 |
-| 当前/计划时间点状态 | `get_queue_info` | 优先读 `mainScenario`/`answerTarget`/`replyPolicy`/`matchedQueueTarget`/`selectedReference`；用户主动给人数/桌型时按匹配结果回答，不用总等待替代 |
+| 当前/计划时间点状态 | `get_queue_info` | 当前状态先逐店检查 `数据是否新鲜`，只有 `true` 才按当前桌数回答；过期时只说明最近采集时间和当前无法确认。其余优先读 `mainScenario`/`answerTarget`/`replyPolicy`/`matchedQueueTarget`/`selectedReference` |
 | 已发生餐段事实 | `get_queue_period_facts` | 明确是实际观测 |
 | 未来餐段建议 | `get_queue_period_advice` | 说明是参考建议，不是事实 |
 | 取号入口咨询 | `get_queue_info` | 读 `取号说明.门店取号口径`，不触发授权 |
@@ -104,6 +104,7 @@ node <skill_dir>/scripts/queue.js <command>
 - 不要把等待桌数换算成具体分钟
 - 不要把前一天和上周同日加权、平均或取最保守值说成唯一结论（表格展示可以两条都展示）
 - 不要把历史参考说成目标日期事实
+- 不要把 `数据是否新鲜` 不为 `true` 的最后一次记录说成当前排队状态
 - 不要用门店当前总等待冒充用户个人排队进度
 - 不要声称已帮用户取号、取消排队或查到个人进度
 - 五道口店不要引导成线上取号

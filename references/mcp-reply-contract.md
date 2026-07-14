@@ -10,6 +10,7 @@
 | `atoms` | 语义原子（如 `partySizeTarget` / `tableTypeTarget` / `plannedVisitReference` / `beforeOpen` / `afterClose`）。 |
 | `answerTarget` | 应优先回答的数据位置，例如 `{ type: 'matchedQueueTarget', field: '…等待桌数' }` 或 `{ type: 'plannedVisitReference', field: '历史参考.selectedReference' }`。 |
 | `replyPolicy` | `requiredPoints`（必答）、`forbiddenPoints`（禁答）、`followUpQuestion`、`nextSuggestedQuestion`、`linkRequired`。 |
+| `当前排队状态.门店[].数据是否新鲜` | 当前快照能否作为实时事实。只有 `true` 才能回答当前等待桌数；`false` 时只说明 `最近采集时间` 和当前状态无法确认，`最后一次记录` 仅供回看。 |
 | `selectedReference` | 计划到店历史参考中应优先说的那一条；**上周同日优先于前一天**。一句话建议读它；不要把前一天和上周同日加权 / 平均 / 取最保守后说成唯一结论。表格可两条都展示。 |
 | `_agent_instruction` | 给 Agent 的内部指令，**不要原样展示给用户**。 |
 
@@ -27,6 +28,7 @@
 - 不要把等待桌数换算成准确分钟。
 - 不要把前一天和上周同日加权、平均或取最保守值后说成唯一结论。
 - 不要把历史参考说成目标日期事实。
+- 不要把过期、缺失或读取失败的最后一次快照说成当前排队状态。
 - 不要用门店当前总等待冒充用户个人排队进度。
 - 不要声称 MCP 已帮用户取号、取消排队或查到个人进度。
 - 五道口店不要引导成线上取号。
