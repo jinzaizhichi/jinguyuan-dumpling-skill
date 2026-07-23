@@ -12,6 +12,7 @@ __pycache__/
 # 协作与本地环境
 .notes/
 .clawhub/
+.qoder/
 skills/
 .worktrees/
 .superpowers/
