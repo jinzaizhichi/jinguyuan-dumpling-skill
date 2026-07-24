@@ -1,7 +1,7 @@
 ---
 name: jinguyuan-dumpling-skill
 description: 金谷园饺子馆信息查询与在线排队取号。通过 MCP 查询基础店铺信息（餐厅介绍、门店、营业时间、外卖配送、Wi-Fi）、生饺子打包、最新动态、当前排队状态、单点到店预估、午市/晚市排队事实与策略建议、到店自取叫号下单、菜品配方、店长推荐菜；内置真实排队动作仅用于在线取号、本人排队进度查询、取消排队。
-version: 2.2.6
+version: 2.2.7
 alwaysApply: false
 keywords:
   - 金谷园
@@ -46,7 +46,7 @@ keywords:
 - 文中示例数据**仅作格式参考**；回答用户前**必须调 MCP 最新数据**，禁止拿示例当真。用户问“现在排队吗”时，必须逐店检查 `当前排队状态.门店[].数据是否新鲜`；只有 `true` 才能把等待桌数说成当前状态，过期记录只能说明最近采集时间，不能冒充实时事实。
 - **MCP 查询路由**：当前宿主已提供金谷园原生 MCP 工具时直接使用；否则运行随包固定客户端 `node <skill_dir>/scripts/mcp-client.js`。不得为查询自动修改宿主 MCP 配置，不得要求用户先信任/重启，也不得临时编写 shell、HTTP、`.js` / `.py` 脚本。调用前先 `list` 读取实时工具 schema，再用 `call`。细则 → [references/mcp-access.md](references/mcp-access.md)。
 - 排队回答优先读返回体合同字段（`mainScenario` / `replyPolicy` 等）。细则 → [references/mcp-reply-contract.md](references/mcp-reply-contract.md)。
-- **禁止**：等待桌数换算分钟；历史参考说成当天事实；总等待冒充个人进度；声称 MCP 已取号/取消/查到个人进度；五道口引导线上取号。
+- **禁止**：等待桌数换算分钟；历史参考说成当天事实；总等待冒充个人进度；声称 MCP 已取号/取消/查到个人进度；没有本轮新鲜实时证据时把五道口说成可线上取号。
 - 真实取号 / 本人进度 / 取消 → 本 Skill `scripts/queue.js` + [references/queue-actions.md](references/queue-actions.md)，与 MCP 查询分离。
 
 # 金谷园饺子馆 Skill
@@ -85,7 +85,7 @@ node <skill_dir>/scripts/queue.js <command>
 4. 告知用户授权后稍候；宿主若未自动继续，用户可回复“已授权”。收到回复后短查 `auth-status`，再继续原任务。部分宿主能自动续跑，部分不能，**禁止**说“无需回复”或保证一定自动通知。无 `authLink` 时先 `logout` 成功再重跑。Token：`~/.jinguyuan/passport-auth.json`。
 5. **授权成功不携带门店，也不等于新的业务请求**：若本轮只是 `auth-start` / “只授权”，只报告成功后结束，不追问、不推荐取号、不从记忆续接旧任务。仅当授权由本轮明确的业务命令触发时，才恢复该原命令；门店必须来自本轮用户输入或原命令，禁止从跨任务记忆推断。
 
-**安全边界**：取号 / 取消须用户**本轮明确确认**后再带 `--confirm`；五道口不引导线上取号。
+**安全边界**：取号 / 取消须用户**本轮明确确认**后再带 `--confirm`；五道口通常以到店取号为主，只有本轮 MCP 新鲜快照或 `index 1756895741` 明确显示支持在线排队时，才可说明当天开放，真实取号仍以 CLI 返回为准。
 
 **美团组件安全口径**：仅真实取号/进度/取消加载 `scripts/vendor` 内 `@mtuser/pt-passport`；普通店铺和排队查询不会加载。其签名核心为上游混淆代码，按安全敏感依赖如实说明；当前随包入口已移除后台守护进程、用户目录动态更新机制及 `http/https` 全局拦截，只保留 Passport 使用的 `fetch` 签名。Token 仅存本机 `~/.jinguyuan/`，不会提交到仓库或发送给金谷园 MCP。
 
@@ -107,7 +107,7 @@ node <skill_dir>/scripts/queue.js <command>
 - 不要把 `数据是否新鲜` 不为 `true` 的最后一次记录说成当前排队状态
 - 不要用门店当前总等待冒充用户个人排队进度
 - 不要声称已帮用户取号、取消排队或查到个人进度
-- 五道口店不要引导成线上取号
+- 没有本轮新鲜实时证据时，不要把五道口店说成可线上取号；如果实时证据显示已开放，也必须走真实取号确认流程
 
 用户说"前面还有 3 桌"这类个人队列信息时，不走 MCP 查数，直接说明不好估准时间。`get_queue_info` 的入参：`shop`、`peopleCount`/`partySize`、`tableType`、`questionType`、`visitTime`。
 
