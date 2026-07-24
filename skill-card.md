@@ -40,7 +40,7 @@ Mitigation: Do not present 五道口店 as online-queue capable unless the same-
 **Other Properties Related to Output:** [May include QR-code image links for Meituan authorization and must distinguish current, stale, historical, and personal queue information.] <br>
 
 ## Skill Version(s): <br>
-2.2.8 (source: release evidence, SKILL.md frontmatter, skill.json, package.json) <br>
+2.3.0 (source: release evidence, SKILL.md frontmatter, skill.json, package.json) <br>
 
 ## Ethical Considerations: <br>
 Users should evaluate whether this skill is appropriate for their environment, review any generated or modified files before relying on them, and apply their organization's safety, security, and compliance requirements before deployment. <br>
